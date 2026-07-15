@@ -46,10 +46,7 @@ CURRENCY = {
 }
 
 # Alcuni mercati hanno sigle diverse sull'endpoint bulk: proviamo in ordine.
-EXCHANGE_ALIASES = {
-    "MIL": ["MIL", "MI"],
-    "TSE": ["TSE", "T", "TYO", "TO", "JP"],
-}
+EXCHANGE_ALIASES = {}   # (Milano e Tokyo non sono coperte da EODHD: si usano gli ADR USA)
 RESOLVED = {}   # cache: sigla watchlist -> sigla bulk funzionante
 
 
