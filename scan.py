@@ -42,7 +42,7 @@ REPORTS = DOCS / "reports"
 # Valuta per exchange (il v2.4 scriveva sempre USD: qui e' corretta)
 CURRENCY = {
     "US": "USD", "LSE": "GBX", "PA": "EUR", "XETRA": "EUR",
-    "MC": "EUR", "AS": "EUR", "SW": "CHF",
+    "MC": "EUR", "AS": "EUR", "SW": "CHF", "MIL": "EUR", "TSE": "JPY",
 }
 
 
@@ -136,7 +136,7 @@ def scan():
     total_tickers = sum(len(v) for v in watch.values())
     log(f"Watchlist: {total_tickers} ticker su {len(watch)} mercati\n")
 
-    results, errors = [], []
+    results, errors, missing = [], [], []
     global_trade_date = None
 
     for exchange in sorted(watch):
@@ -157,6 +157,7 @@ def scan():
         for base, (name, index) in names.items():
             pc, cc = prev.get(base), curr.get(base)
             if not pc or not cc:
+                missing.append(f"{base}.{exchange}")
                 continue
             pct = (cc / pc - 1.0) * 100.0
             if abs(pct) > MAX_ABS_CHANGE:                     # sanity check
@@ -183,9 +184,8 @@ def scan():
     for r in results:
         if r["pct"] > ALERT_THRESHOLD:
             break
-        b = r["ticker"].split(".")[0]
-        if b not in seen:
-            seen.add(b)
+        if r["ticker"] not in seen:
+            seen.add(r["ticker"])
             alerts.append(r)
 
     # ---- CSV: formato identico al v2.4 ----
@@ -210,6 +210,7 @@ def scan():
         "total_analyzed": len(results),
         "alerts_count": len(alerts),
         "errors": errors,
+        "missing": sorted(missing),
         "csv": f"reports/{csv_name}",
         "results": results,
     }
@@ -254,6 +255,8 @@ def scan():
         log(f"\nReport: docs/reports/{csv_name}")
     else:
         log("\nNessun alert oggi.")
+    if missing:
+        log(f"\nTicker senza dati ({len(missing)}): {', '.join(sorted(missing))}")
     if errors:
         log(f"\nATTENZIONE - mercati non scaricati: {', '.join(errors)}")
     log("=" * 70)

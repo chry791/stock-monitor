@@ -737,3 +737,102 @@ ABBN.SW,ABB Ltd,SW,EuroStoxx 50
 SREN.SW,Swiss Re,SW,EuroStoxx 50
 LONN.SW,Lonza Group,SW,EuroStoxx 50
 GEBN.SW,Geberit,SW,EuroStoxx 50
+DTG.XETRA,Daimler Truck Holding,XETRA,DAX 40
+G1A.XETRA,GEA Group,XETRA,DAX 40
+G24.XETRA,Scout24,XETRA,DAX 40
+TLX.XETRA,Talanx,XETRA,Germany Big Cap
+RNO.PA,Renault,PA,CAC 40
+STLAP.PA,Stellantis,PA,CAC 40
+BVI.PA,Bureau Veritas,PA,CAC 40
+ENX.PA,Euronext,PA,CAC 40
+FGR.PA,Eiffage,PA,CAC 40
+AM.PA,Dassault Aviation,PA,France Big Cap
+ENEL.MIL,Enel,MIL,FTSE MIB
+ENI.MIL,Eni,MIL,FTSE MIB
+ISP.MIL,Intesa Sanpaolo,MIL,FTSE MIB
+UCG.MIL,UniCredit,MIL,FTSE MIB
+RACE.MIL,Ferrari,MIL,FTSE MIB
+G.MIL,Assicurazioni Generali,MIL,FTSE MIB
+LDO.MIL,Leonardo,MIL,FTSE MIB
+PRY.MIL,Prysmian,MIL,FTSE MIB
+MONC.MIL,Moncler,MIL,FTSE MIB
+MB.MIL,Mediobanca,MIL,FTSE MIB
+BAMI.MIL,Banco BPM,MIL,FTSE MIB
+BMPS.MIL,Banca MPS,MIL,FTSE MIB
+BPE.MIL,BPER Banca,MIL,FTSE MIB
+FBK.MIL,FinecoBank,MIL,FTSE MIB
+BMED.MIL,Banca Mediolanum,MIL,FTSE MIB
+PST.MIL,Poste Italiane,MIL,FTSE MIB
+TRN.MIL,Terna,MIL,FTSE MIB
+SRG.MIL,Snam,MIL,FTSE MIB
+IG.MIL,Italgas,MIL,FTSE MIB
+HER.MIL,Hera,MIL,FTSE MIB
+A2A.MIL,A2A,MIL,FTSE MIB
+TEN.MIL,Tenaris,MIL,FTSE MIB
+SPM.MIL,Saipem,MIL,FTSE MIB
+BZU.MIL,Buzzi,MIL,FTSE MIB
+CPR.MIL,Campari,MIL,FTSE MIB
+AMP.MIL,Amplifon,MIL,FTSE MIB
+REC.MIL,Recordati,MIL,FTSE MIB
+DIA.MIL,DiaSorin,MIL,FTSE MIB
+IP.MIL,Interpump Group,MIL,FTSE MIB
+PIRC.MIL,Pirelli,MIL,FTSE MIB
+IVG.MIL,Iveco Group,MIL,FTSE MIB
+UNI.MIL,Unipol,MIL,FTSE MIB
+AZM.MIL,Azimut,MIL,FTSE MIB
+BC.MIL,Brunello Cucinelli,MIL,FTSE MIB
+NEXI.MIL,Nexi,MIL,FTSE MIB
+INW.MIL,Inwit,MIL,FTSE MIB
+TIT.MIL,Telecom Italia,MIL,FTSE MIB
+LTMC.MIL,Lottomatica,MIL,FTSE MIB
+7203.TSE,Toyota Motor,TSE,Japan Top
+6758.TSE,Sony Group,TSE,Japan Top
+8306.TSE,Mitsubishi UFJ Financial,TSE,Japan Top
+6501.TSE,Hitachi,TSE,Japan Top
+9983.TSE,Fast Retailing,TSE,Japan Top
+6098.TSE,Recruit Holdings,TSE,Japan Top
+9984.TSE,SoftBank Group,TSE,Japan Top
+8035.TSE,Tokyo Electron,TSE,Japan Top
+6861.TSE,Keyence,TSE,Japan Top
+7974.TSE,Nintendo,TSE,Japan Top
+4063.TSE,Shin-Etsu Chemical,TSE,Japan Top
+8316.TSE,Sumitomo Mitsui Financial,TSE,Japan Top
+9432.TSE,NTT,TSE,Japan Top
+9433.TSE,KDDI,TSE,Japan Top
+8058.TSE,Mitsubishi Corp,TSE,Japan Top
+8001.TSE,Itochu,TSE,Japan Top
+8031.TSE,Mitsui & Co,TSE,Japan Top
+8411.TSE,Mizuho Financial,TSE,Japan Top
+7267.TSE,Honda Motor,TSE,Japan Top
+6902.TSE,Denso,TSE,Japan Top
+6981.TSE,Murata Manufacturing,TSE,Japan Top
+6857.TSE,Advantest,TSE,Japan Top
+4502.TSE,Takeda Pharmaceutical,TSE,Japan Top
+4568.TSE,Daiichi Sankyo,TSE,Japan Top
+4519.TSE,Chugai Pharmaceutical,TSE,Japan Top
+6954.TSE,Fanuc,TSE,Japan Top
+6367.TSE,Daikin Industries,TSE,Japan Top
+4661.TSE,Oriental Land,TSE,Japan Top
+8766.TSE,Tokio Marine,TSE,Japan Top
+2914.TSE,Japan Tobacco,TSE,Japan Top
+6273.TSE,SMC,TSE,Japan Top
+7741.TSE,Hoya,TSE,Japan Top
+4543.TSE,Terumo,TSE,Japan Top
+6594.TSE,Nidec,TSE,Japan Top
+6723.TSE,Renesas Electronics,TSE,Japan Top
+6146.TSE,Disco,TSE,Japan Top
+6920.TSE,Lasertec,TSE,Japan Top
+9434.TSE,SoftBank Corp,TSE,Japan Top
+5108.TSE,Bridgestone,TSE,Japan Top
+7751.TSE,Canon,TSE,Japan Top
+6752.TSE,Panasonic,TSE,Japan Top
+8604.TSE,Nomura Holdings,TSE,Japan Top
+8801.TSE,Mitsui Fudosan,TSE,Japan Top
+7011.TSE,Mitsubishi Heavy Industries,TSE,Japan Top
+6503.TSE,Mitsubishi Electric,TSE,Japan Top
+4901.TSE,Fujifilm,TSE,Japan Top
+8591.TSE,ORIX,TSE,Japan Top
+3382.TSE,Seven & i Holdings,TSE,Japan Top
+9022.TSE,Central Japan Railway,TSE,Japan Top
+6301.TSE,Komatsu,TSE,Japan Top
+7269.TSE,Suzuki Motor,TSE,Japan Top
