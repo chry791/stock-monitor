@@ -1,0 +1,43 @@
+name: Scansione giornaliera
+
+on:
+  schedule:
+    - cron: '0 21 * * 1-5'   # 23:00 italiane (estate), lun-ven sera
+    - cron: '45 5 * * 2-6'   # 7:45 italiane, giro di sicurezza al mattino
+  workflow_dispatch: {}      # il TUO pulsante "Run workflow"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scan
+  cancel-in-progress: false
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dipendenze
+        run: pip install requests
+
+      - name: Scansione
+        env:
+          EOD_API_KEY: ${{ secrets.EOD_API_KEY }}
+        run: python scan.py
+
+      - name: Pubblica risultati
+        run: |
+          git config user.name  "stock-monitor-bot"
+          git config user.email "actions@github.com"
+          git add docs/
+          git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
+          git commit -m "Scansione $(date -u +%F)"
+          git push
