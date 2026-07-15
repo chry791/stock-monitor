@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock Monitor — Ribassi del giorno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1B25; --panel:#16273370; --panel-solid:#162733; --line:#24384680;
+    --text:#E8EEF2; --muted:#7C93A3; --loss:#FF6B5E; --gain:#3ECF9A;
+    --amber:#F2B441; --bar:#FF6B5E26; --radius:14px;
+    --mono:'IBM Plex Mono',monospace; --disp:'Archivo',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{background:var(--bg);color:var(--text);font-family:var(--disp);
+       font-size:15px;line-height:1.5;min-height:100vh;
+       background-image:radial-gradient(1200px 500px at 80% -10%, #1A3040 0%, transparent 60%)}
+  .wrap{max-width:880px;margin:0 auto;padding:28px 16px 60px}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:baseline;justify-content:space-between;
+         gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  h1{font-weight:800;font-size:clamp(22px,4.5vw,30px);letter-spacing:-.02em}
+  h1 .tick{color:var(--loss)}
+  .stamp{font-family:var(--mono);font-size:12px;color:var(--muted)}
+  .stamp b{color:var(--amber);font-weight:600}
+
+  /* ---------- hero: peggiore del giorno ---------- */
+  .hero{margin:20px 0 14px;padding:20px;border:1px solid var(--line);
+        border-radius:var(--radius);background:var(--panel);
+        display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .hero .pct{font-family:var(--mono);font-weight:600;color:var(--loss);
+             font-size:clamp(34px,8vw,52px);letter-spacing:-.03em;line-height:1}
+  .hero .who{min-width:0}
+  .hero .who .t{font-family:var(--mono);font-size:13px;color:var(--amber)}
+  .hero .who .n{font-weight:700;font-size:clamp(17px,3.5vw,21px)}
+  .hero .lbl{margin-left:auto;font-family:var(--mono);font-size:11px;
+             color:var(--muted);text-transform:uppercase;letter-spacing:.14em;
+             writing-mode:vertical-rl;text-orientation:mixed}
+  .hero.calm .pct{color:var(--gain)}
+
+  /* ---------- chips riepilogo ---------- */
+  .chips{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
+         gap:10px;margin-bottom:18px}
+  .chip{padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);
+        background:var(--panel)}
+  .chip .v{font-family:var(--mono);font-weight:600;font-size:20px}
+  .chip .k{font-size:11px;color:var(--muted);text-transform:uppercase;
+           letter-spacing:.1em;margin-top:2px}
+  .chip.loss .v{color:var(--loss)} .chip.amber .v{color:var(--amber)}
+
+  /* ---------- controlli ---------- */
+  .controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;
+            margin-bottom:14px}
+  input[type=search]{flex:1;min-width:150px;padding:10px 14px;border-radius:10px;
+        border:1px solid var(--line);background:var(--panel-solid);
+        color:var(--text);font-family:var(--mono);font-size:13px;outline:none}
+  input[type=search]:focus{border-color:var(--amber)}
+  .thr{display:flex;align-items:center;gap:8px;font-family:var(--mono);
+       font-size:12px;color:var(--muted)}
+  .thr output{color:var(--loss);font-weight:600;min-width:52px}
+  input[type=range]{accent-color:var(--loss);width:130px}
+  select{padding:10px 12px;border-radius:10px;border:1px solid var(--line);
+         background:var(--panel-solid);color:var(--text);
+         font-family:var(--mono);font-size:12px}
+  .btn{padding:10px 16px;border-radius:10px;border:1px solid var(--line);
+       background:var(--panel-solid);color:var(--text);font-family:var(--mono);
+       font-size:12px;cursor:pointer;text-decoration:none;white-space:nowrap}
+  .btn:hover,.btn:focus-visible{border-color:var(--amber);color:var(--amber)}
+  :focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+  /* ---------- tabella-grafico (firma del design) ---------- */
+  .list{border:1px solid var(--line);border-radius:var(--radius);
+        overflow:hidden;background:var(--panel)}
+  .rowh,.row{display:grid;grid-template-columns:96px 1fr 88px 118px;
+        gap:10px;align-items:center;padding:11px 16px}
+  .rowh{font-family:var(--mono);font-size:10px;color:var(--muted);
+        text-transform:uppercase;letter-spacing:.12em;
+        border-bottom:1px solid var(--line)}
+  .row{border-bottom:1px solid var(--line);position:relative}
+  .row:last-child{border-bottom:none}
+  .row .bar{position:absolute;inset:0;background:var(--bar);
+            transform-origin:left;pointer-events:none}
+  .row>*{position:relative}
+  .row .t{font-family:var(--mono);font-size:13px;color:var(--amber)}
+  .row .t small{display:block;color:var(--muted);font-size:10px}
+  .row .n{font-weight:500;font-size:14px;overflow:hidden;
+          text-overflow:ellipsis;white-space:nowrap}
+  .row .px{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:right}
+  .row .p{font-family:var(--mono);font-weight:600;font-size:15px;
+          color:var(--loss);text-align:right}
+  .row .p.up{color:var(--gain)}
+  .empty{padding:34px 20px;text-align:center;color:var(--muted);
+         font-family:var(--mono);font-size:13px}
+
+  /* ---------- storico ---------- */
+  h2{font-size:12px;font-family:var(--mono);color:var(--muted);
+     text-transform:uppercase;letter-spacing:.14em;margin:26px 0 10px}
+  .days{display:flex;gap:6px;flex-wrap:wrap}
+  .day{width:44px;padding:6px 0;border:1px solid var(--line);border-radius:8px;
+       background:var(--panel-solid);color:var(--muted);cursor:pointer;
+       font-family:var(--mono);font-size:10px;text-align:center;line-height:1.4}
+  .day b{display:block;font-size:13px;color:var(--text)}
+  .day.hot b{color:var(--loss)} .day.sel{border-color:var(--amber);color:var(--amber)}
+  .note{margin-top:26px;font-size:12px;color:var(--muted)}
+  @media (max-width:560px){
+    .rowh,.row{grid-template-columns:84px 1fr 92px}
+    .px{display:none}.rowh .px{display:none}
+    .hero .lbl{display:none}
+  }
+  @media (prefers-reduced-motion:no-preference){
+    .row .bar{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Stock<span class="tick">▼</span>Monitor</h1>
+    <div class="stamp" id="stamp">caricamento…</div>
+  </header>
+
+  <section class="hero" id="hero" hidden>
+    <div class="pct" id="heroPct"></div>
+    <div class="who">
+      <div class="t" id="heroTick"></div>
+      <div class="n" id="heroName"></div>
+    </div>
+    <div class="lbl">peggiore del giorno</div>
+  </section>
+
+  <section class="chips" id="chips" hidden>
+    <div class="chip loss"><div class="v" id="cAlert">–</div><div class="k">alert</div></div>
+    <div class="chip"><div class="v" id="cScan">–</div><div class="k">titoli analizzati</div></div>
+    <div class="chip"><div class="v" id="cMkt">–</div><div class="k">mercati</div></div>
+    <div class="chip amber"><div class="v" id="cAvg">–</div><div class="k">media alert</div></div>
+  </section>
+
+  <div class="controls" id="controls" hidden>
+    <input type="search" id="q" placeholder="cerca ticker o nome…" aria-label="Cerca">
+    <label class="thr">soglia
+      <input type="range" id="thr" min="-15" max="0" step="0.5" value="-5">
+      <output id="thrOut">-5.0%</output>
+    </label>
+    <select id="mkt" aria-label="Mercato"><option value="">tutti i mercati</option></select>
+    <a class="btn" id="csv" download>Scarica CSV</a>
+  </div>
+
+  <section class="list" aria-live="polite">
+    <div class="rowh"><span>ticker</span><span>società</span>
+      <span class="px" style="text-align:right">chiusura</span>
+      <span style="text-align:right">variazione</span></div>
+    <div id="rows"><div class="empty" id="msg">Caricamento dati…</div></div>
+  </section>
+
+  <h2 id="histTitle" hidden>ultimi giorni</h2>
+  <div class="days" id="days"></div>
+
+  <p class="note">Dati di chiusura EODHD · scansione automatica giornaliera ·
+     soglia predefinita −5% · <span id="genAt"></span></p>
+</div>
+
+<script>
+(async function(){
+  const $=id=>document.getElementById(id);
+  const fmt=n=>n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  let DATA=null, HIST=[], selDay=null;
+
+  try{
+    DATA=await (await fetch('data.json?'+Date.now())).json();
+  }catch(e){
+    $('msg').textContent='Nessuna scansione ancora eseguita. Lancia la prima scansione da GitHub → Actions → "Scansione giornaliera" → Run workflow.';
+    $('stamp').textContent='in attesa della prima scansione';
+    return;
+  }
+  try{ HIST=await (await fetch('history.json?'+Date.now())).json(); }catch(e){}
+
+  selDay=DATA.trade_date;
+  $('stamp').innerHTML='chiusure del <b>'+DATA.trade_date+'</b>';
+  $('genAt').textContent='ultimo aggiornamento: '+DATA.generated_at.replace('T',' ');
+  $('csv').href=DATA.csv;
+  ['hero','chips','controls','histTitle'].forEach(id=>$(id).hidden=false);
+
+  const markets=[...new Set(DATA.results.map(r=>r.exchange))].sort();
+  for(const m of markets){const o=document.createElement('option');o.value=m;o.textContent=m;$('mkt').append(o);}
+
+  function currentRows(){
+    if(selDay!==DATA.trade_date){
+      const h=HIST.find(x=>x.date===selDay);
+      return (h?h.alerts:[]).map(a=>({ticker:a.t,name:a.n,pct:a.p,exchange:a.t.split('.')[1]||'',historic:true}));
+    }
+    return DATA.results;
+  }
+
+  function render(){
+    const q=$('q').value.trim().toLowerCase();
+    const thr=parseFloat($('thr').value);
+    const mkt=$('mkt').value;
+    const past=selDay!==DATA.trade_date;
+    $('thrOut').textContent=thr.toFixed(1)+'%';
+
+    let rows=currentRows().filter(r=>r.pct<=thr)
+      .filter(r=>!mkt||r.exchange===mkt)
+      .filter(r=>!q||r.ticker.toLowerCase().includes(q)||r.name.toLowerCase().includes(q))
+      .sort((a,b)=>a.pct-b.pct);
+
+    const maxAbs=Math.max(8,...rows.map(r=>Math.abs(r.pct)));
+    const box=$('rows');box.innerHTML='';
+    if(!rows.length){
+      box.innerHTML='<div class="empty">Nessun titolo sotto la soglia '+thr.toFixed(1)+'% '+(past?'in questo giorno':'oggi')+' ✓</div>';
+    }
+    for(const r of rows){
+      const d=document.createElement('div');d.className='row';
+      d.innerHTML='<div class="bar" style="transform:scaleX('+(Math.abs(r.pct)/maxAbs)+')"></div>'
+        +'<span class="t">'+r.ticker.split('.')[0]+'<small>'+r.exchange+'</small></span>'
+        +'<span class="n" title="'+r.name+'">'+r.name+'</span>'
+        +'<span class="px">'+(r.historic?'—':fmt(r.curr_close)+' <small>'+r.currency+'</small>')+'</span>'
+        +'<span class="p'+(r.pct>0?' up':'')+'">'+(r.pct>0?'+':'')+r.pct.toFixed(2)+'%</span>';
+      box.append(d);
+    }
+
+    // hero + chips (solo sul giorno corrente della scansione selezionata)
+    const src=currentRows().slice().sort((a,b)=>a.pct-b.pct);
+    const worst=src[0];
+    const alerts=src.filter(r=>r.pct<=DATA.threshold);
+    if(worst){
+      $('hero').classList.toggle('calm',worst.pct>DATA.threshold);
+      $('heroPct').textContent=worst.pct.toFixed(2)+'%';
+      $('heroTick').textContent=worst.ticker;
+      $('heroName').textContent=worst.name;
+    }
+    $('cAlert').textContent=alerts.length;
+    $('cScan').textContent=past?'—':DATA.total_analyzed+'/'+DATA.total_watchlist;
+    $('cMkt').textContent=past?'—':markets.length;
+    $('cAvg').textContent=alerts.length?
+      (alerts.reduce((s,r)=>s+r.pct,0)/alerts.length).toFixed(2)+'%':'—';
+    $('stamp').innerHTML='chiusure del <b>'+selDay+'</b>'+(past?' <span style="color:var(--muted)">(storico)</span>':'');
+    const h=HIST.find(x=>x.date===selDay);
+    $('csv').href=past&&h?h.csv:DATA.csv;
+  }
+
+  function renderDays(){
+    const box=$('days');box.innerHTML='';
+    for(const h of HIST.slice(-30).reverse()){
+      const b=document.createElement('button');
+      b.className='day'+(h.count>0?' hot':'')+(h.date===selDay?' sel':'');
+      b.innerHTML=h.date.slice(5).replace('-','/')+'<b>'+h.count+'</b>';
+      b.title=h.date+' — '+h.count+' alert'+(h.worst?' · peggiore '+h.worst+' '+h.worst_pct+'%':'');
+      b.onclick=()=>{selDay=h.date;renderDays();render();};
+      box.append(b);
+    }
+  }
+
+  $('q').oninput=render; $('thr').oninput=render; $('mkt').onchange=render;
+  renderDays(); render();
+})();
+</script>
+</body>
+</html>
