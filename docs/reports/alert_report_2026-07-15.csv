@@ -1,14 +1,12 @@
 Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
-IBM.US,IBM Corp,US,USD,290.23,217.07,-25.21%
-BIIB.US,Biogen Inc,US,USD,209.03,191.95,-8.17%
-HCA.US,HCA Healthcare,US,USD,390.74,363.60,-6.95%
-ISRG.US,Intuitive Surgical,US,USD,407.12,379.50,-6.78%
+PNR.US,Pentair plc,US,USD,75.68,64.33,-15.00%
+PGR.US,Progressive Corp,US,USD,226.58,205.22,-9.43%
+WDC.US,Western Digital,US,USD,563.32,513.84,-8.78%
+ELV.US,Elevance Health,US,USD,426.79,390.33,-8.54%
+MU.US,Micron Technology,US,USD,983.12,904.28,-8.02%
+NTAP.US,NetApp Inc,US,USD,174.55,162.10,-7.13%
+GLW.US,Corning Inc,US,USD,187.64,174.41,-7.05%
 IFX.XETRA,Infineon Technologies,XETRA,EUR,71.82,67.31,-6.28%
-SYK.US,Stryker Corp,US,USD,331.45,311.07,-6.15%
-IT.US,Gartner Inc,US,USD,141.31,132.97,-5.90%
-NOW.US,ServiceNow Inc,US,USD,111.26,104.85,-5.76%
-GEHC.US,GE HealthCare,US,USD,65.31,61.66,-5.59%
-UHS.US,Universal Health Services,US,USD,152.77,144.23,-5.59%
-FICO.US,Fair Isaac Corp,US,USD,1278.25,1210.52,-5.30%
-C.US,Citigroup Inc,US,USD,140.71,133.27,-5.29%
-MDT.US,Medtronic plc,US,USD,83.57,79.30,-5.11%
+CDW.US,CDW Corp,US,USD,139.38,130.86,-6.11%
+ANET.US,Arista Networks,US,USD,182.57,171.92,-5.83%
+STX.US,Seagate Technology,US,USD,878.31,828.30,-5.69%
