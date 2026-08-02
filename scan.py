@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-STOCK MONITOR v3.3 - Scansione Bulk EODHD
+STOCK MONITOR v3.4 - Scansione Bulk EODHD
 ==========================================
-Novita' della v3.3 (rispetto alla v3.2):
+Novita' della v3.4 (rispetto alla v3.3):
+  IL LABORATORIO DEL SEGNALE - registro automatico degli alert:
+    - ogni alert (comprato o no) viene salvato in docs/registro.json
+      con data, prezzo, distanza dal massimo e colore del semaforo;
+    - le scansioni successive, usando i prezzi che scaricano comunque,
+      registrano cosa fa ogni titolo dopo 5, 10 e 20 giorni di borsa
+      (ZERO chiamate API aggiuntive);
+    - il dashboard mostra solo le statistiche aggregate (rimbalzo medio,
+      % positivi, per fascia "dal max") in un riquadro compatto.
+  Scopo: misurare con dati veri il valore del segnale -5%
+  (vedi MANUALE_STRATEGIA.md, capitolo 10 - protocollo Volume 2).
+
+Novita' della v3.3:
   LE SPIE DELL'ORSO - quattro pre-allarmi accanto al semaforo:
     1. TENDENZA:   S&P 500 (SPY) sotto la sua media a 200 giorni
     2. AMPIEZZA:   % dei titoli della watchlist sopra la propria media 200
@@ -63,6 +75,11 @@ NERVOUS_DAYS = 5               # giorni per la media del nervosismo
 VIX_TICKER = "VIX.INDX"        # indice della paura
 VIX_ALERT = 25.0               # VIX: accesa da 25 in su
 BREADTH_MIN = 100              # minimo titoli validi per calcolare l'ampiezza
+
+# Registro del segnale (v3.4)
+LAB_HORIZONS = (5, 10, 20)     # giorni di borsa a cui misurare gli esiti
+LAB_MAX_ENTRIES = 5000         # massimo alert conservati nel registro
+LAB_CALENDAR_DAYS = 150        # giorni di borsa ricordati per contare i giorni
 
 BASE = "https://eodhd.com/api"
 ROOT = Path(__file__).parent
@@ -281,6 +298,89 @@ def compute_breadth_us(us_tickers):
     return above, total
 
 
+def update_registro(trade_date, alerts, all_prices, regime_level):
+    """Registro del segnale (v3.4).
+    - Aggiorna il calendario dei giorni di borsa visti.
+    - Completa gli esiti (r5/r10/r20) degli alert passati usando i prezzi
+      appena scaricati (zero chiamate API).
+    - Aggiunge gli alert di oggi.
+    - Ritorna le statistiche aggregate per il dashboard."""
+    reg_file = DOCS / "registro.json"
+    reg = {"calendar": [], "alerts": []}
+    if reg_file.exists():
+        try:
+            reg = json.loads(reg_file.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    cal = reg.get("calendar", [])
+    if trade_date not in cal:
+        cal = sorted(set(cal + [trade_date]))[-LAB_CALENDAR_DAYS:]
+    reg["calendar"] = cal
+    idx = {d: i for i, d in enumerate(cal)}
+    today_i = idx[trade_date]
+
+    # 1) completa gli esiti degli alert passati
+    for a in reg.get("alerts", []):
+        if a.get("r20") is not None:
+            continue                          # gia' completo
+        ai = idx.get(a.get("date"))
+        if ai is None:
+            continue                          # troppo vecchio per il calendario
+        elapsed = today_i - ai
+        price = all_prices.get(a.get("t"))
+        if not price or elapsed <= 0:
+            continue
+        for n in LAB_HORIZONS:
+            key = f"r{n}"
+            if elapsed >= n and a.get(key) is None:
+                a[key] = round((price / a["p"] - 1.0) * 100.0, 2)
+
+    # 2) aggiunge gli alert di oggi (senza duplicati)
+    seen = {(a.get("t"), a.get("date")) for a in reg.get("alerts", [])}
+    for al in alerts:
+        k = (al["ticker"], trade_date)
+        if k in seen:
+            continue
+        reg["alerts"].append({
+            "date": trade_date, "t": al["ticker"], "n": al["name"],
+            "p": al["curr_close"], "pct": al["pct"],
+            "dm": al.get("dist_max"), "reg": regime_level,
+        })
+    reg["alerts"] = reg["alerts"][-LAB_MAX_ENTRIES:]
+    reg_file.write_text(json.dumps(reg, ensure_ascii=False),
+                        encoding="utf-8")
+
+    # 3) statistiche aggregate
+    def band(a):
+        dm = a.get("dm")
+        if dm is None:
+            return None
+        return "fresco" if dm > -10 else ("intermedio" if dm > -25
+                                          else "profondo")
+
+    def stat(entries, key):
+        vals = [e[key] for e in entries if e.get(key) is not None]
+        if not vals:
+            return None
+        pos = sum(1 for v in vals if v > 0)
+        return {"n": len(vals),
+                "avg": round(sum(vals) / len(vals), 2),
+                "pos": round(pos / len(vals) * 100.0, 0)}
+
+    entries = reg["alerts"]
+    lab = {
+        "since": entries[0]["date"] if entries else trade_date,
+        "total": len(entries),
+        "horizons": {f"r{n}": stat(entries, f"r{n}") for n in LAB_HORIZONS},
+        "bands": {},
+    }
+    for b in ("fresco", "intermedio", "profondo"):
+        grp = [e for e in entries if band(e) == b]
+        lab["bands"][b] = {"total": len(grp),
+                           "r5": stat(grp, "r5")}
+    return lab
+
+
 def previous_trading_day(exchange, curr_date):
     """Trova il giorno di borsa precedente a curr_date per l'exchange:
     prova all'indietro (salta i weekend) finche' il bulk risponde con dati."""
@@ -305,7 +405,7 @@ def scan():
 
     start = datetime.now()
     log("=" * 70)
-    log("STOCK MONITOR v3.3 - SCANSIONE BULK")
+    log("STOCK MONITOR v3.4 - SCANSIONE BULK")
     log("=" * 70)
     log(f"Avvio: {start:%Y-%m-%d %H:%M:%S}   Soglia alert: {ALERT_THRESHOLD}%")
 
@@ -314,6 +414,7 @@ def scan():
     log(f"Watchlist: {total_tickers} ticker su {len(watch)} mercati\n")
 
     results, errors, missing = [], [], []
+    all_prices = {}            # ticker completo -> chiusura odierna (per il registro)
     global_trade_date = None
     regime = None
     spy_trend = None          # spia tendenza: SPY vs media 200
@@ -370,6 +471,7 @@ def scan():
                 br_total += 1
                 if cc > e2:
                     br_above += 1
+            all_prices[f"{base}.{exchange}"] = cc    # per il registro (v3.4)
             found += 1
             results.append({
                 "ticker": f"{base}.{exchange}", "name": name,
@@ -454,6 +556,10 @@ def scan():
                 if vix is not None else None),
     }
 
+    # ---- Registro del segnale (v3.4) ----
+    lab = update_registro(trade_date, alerts, all_prices,
+                          regime["level"] if regime else None)
+
     # ---- data.json per la dashboard ----
     DOCS.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -465,6 +571,7 @@ def scan():
         "alerts_count": len(alerts),
         "regime": regime,
         "spie": spie,
+        "lab": lab,
         "errors": errors,
         "missing": sorted(missing),
         "csv": f"reports/{csv_name}",
@@ -519,6 +626,14 @@ def scan():
             f"(valore {sv['value']})")
     else:
         log("  VIX:        n/d")
+    r5 = lab["horizons"].get("r5")
+    if r5:
+        log(f"\nLABORATORIO: {lab['total']} alert registrati dal {lab['since']}"
+            f" | dopo 5 giorni: {r5['avg']:+.2f}% medio,"
+            f" {r5['pos']:.0f}% positivi (su {r5['n']})")
+    else:
+        log(f"\nLABORATORIO: {lab['total']} alert registrati"
+            f" (primi esiti tra ~5 giorni di borsa)")
     if alerts:
         log(f"\nTITOLI CON PERDITE <= {ALERT_THRESHOLD}%  ({trade_date}):")
         for a in alerts[:20]:
