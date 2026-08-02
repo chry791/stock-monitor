@@ -149,10 +149,16 @@ def bulk_day(exchange, date=None):
                 if close <= 0:
                     continue
                 prices[tick] = close
-                for key, field in (("hi", "hi_250d"), ("e50", "ema_50"),
-                                   ("e200", "ema_200")):
+                for key, fields in (("hi", ("hi_250d", "HI_250D")),
+                                    ("e50", ("ema_50", "EMA_50")),
+                                    ("e200", ("ema_200", "EMA_200"))):
+                    raw = None
+                    for f in fields:
+                        raw = item.get(f)
+                        if raw is not None:
+                            break
                     try:
-                        v = float(item.get(field) or 0)
+                        v = float(raw or 0)
                         if v > 0:
                             extra[key][tick] = v
                     except (TypeError, ValueError):
@@ -201,6 +207,34 @@ def fetch_vix():
     except Exception as e:
         log(f"        (VIX non disponibile: {str(e)[:80]})")
     return None
+
+
+def fetch_spy_ma200():
+    """Paracadute per la spia Tendenza: se il bulk non fornisce le medie,
+    scarica lo storico di SPY (1 chiamata) e calcola la media a 200 giorni.
+    Ritorna (ultimo_prezzo, media200) oppure (None, None)."""
+    try:
+        frm = (datetime.now().date() - timedelta(days=320)).isoformat()
+        r = requests.get(f"{BASE}/eod/SPY.US",
+                         params={"api_token": API_KEY, "fmt": "json",
+                                 "from": frm},
+                         timeout=TIMEOUT)
+        r.raise_for_status()
+        data = r.json()
+        closes = []
+        for row in data if isinstance(data, list) else []:
+            v = row.get("adjusted_close") or row.get("close")
+            try:
+                v = float(v)
+                if v > 0:
+                    closes.append(v)
+            except (TypeError, ValueError):
+                pass
+        if len(closes) >= 200:
+            return closes[-1], sum(closes[-200:]) / 200.0
+    except Exception as e:
+        log(f"        (media 200 SPY non calcolabile: {str(e)[:80]})")
+    return None, None
 
 
 def previous_trading_day(exchange, curr_date):
@@ -347,6 +381,15 @@ def scan():
 
     breadth_pct = round(br_above / br_total * 100.0, 1) if br_total else None
     vix = fetch_vix()
+
+    # paracadute Tendenza: se il bulk non ha fornito le medie mobili,
+    # calcola la media 200 di SPY dallo storico (1 chiamata in piu')
+    if spy_trend is None:
+        log("        (medie mobili assenti nel bulk: calcolo la media 200 di SPY)")
+        sc, sm = fetch_spy_ma200()
+        if sc and sm:
+            spy_trend = {"on": sc <= sm,
+                         "pct": round((sc / sm - 1.0) * 100.0, 1)}
 
     spie = {
         "tendenza": ({"on": spy_trend["on"], "pct": spy_trend["pct"]}
