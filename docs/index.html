@@ -28,6 +28,18 @@
   .stamp{font-family:var(--mono);font-size:12px;color:var(--muted)}
   .stamp b{color:var(--amber);font-weight:600}
 
+  /* ---------- semaforo di regime ---------- */
+  .semaforo{display:flex;align-items:center;gap:14px;margin:16px 0 4px;
+        padding:14px 16px;border:1px solid var(--line);
+        border-radius:var(--radius);background:var(--panel)}
+  .semaforo .dot{width:16px;height:16px;border-radius:50%;flex:none;
+        background:var(--muted)}
+  .semaforo .semtxt{min-width:0;flex:1}
+  .semaforo .semtxt b{display:block;font-size:14px}
+  .semaforo .semtxt span{display:block;font-size:12px;color:var(--muted)}
+  .semaforo .sempct{font-family:var(--mono);font-size:12px;color:var(--muted);
+        text-align:right;flex:none}
+
   /* ---------- hero: peggiore del giorno ---------- */
   .hero{margin:20px 0 14px;padding:20px;border:1px solid var(--line);
         border-radius:var(--radius);background:var(--panel);
@@ -75,7 +87,7 @@
   /* ---------- tabella-grafico (firma del design) ---------- */
   .list{border:1px solid var(--line);border-radius:var(--radius);
         overflow:hidden;background:var(--panel)}
-  .rowh,.row{display:grid;grid-template-columns:96px 1fr 88px 118px;
+  .rowh,.row{display:grid;grid-template-columns:96px 1fr 88px 76px 110px;
         gap:10px;align-items:center;padding:11px 16px}
   .rowh{font-family:var(--mono);font-size:10px;color:var(--muted);
         text-transform:uppercase;letter-spacing:.12em;
@@ -93,6 +105,10 @@
   .row .p{font-family:var(--mono);font-weight:600;font-size:15px;
           color:var(--loss);text-align:right}
   .row .p.up{color:var(--gain)}
+  .row .dm{font-family:var(--mono);font-size:12px;color:var(--muted);
+          text-align:right}
+  .row .dm.mid{color:var(--amber)}
+  .row .dm.deep{color:var(--loss)}
   .empty{padding:34px 20px;text-align:center;color:var(--muted);
          font-family:var(--mono);font-size:13px}
 
@@ -107,9 +123,10 @@
   .day.hot b{color:var(--loss)} .day.sel{border-color:var(--amber);color:var(--amber)}
   .note{margin-top:26px;font-size:12px;color:var(--muted)}
   @media (max-width:560px){
-    .rowh,.row{grid-template-columns:84px 1fr 92px}
+    .rowh,.row{grid-template-columns:84px 1fr 62px 88px}
     .px{display:none}.rowh .px{display:none}
     .hero .lbl{display:none}
+    .semaforo .sempct{display:none}
   }
   @media (prefers-reduced-motion:no-preference){
     .row .bar{transition:transform .5s cubic-bezier(.2,.8,.2,1)}
@@ -122,6 +139,12 @@
     <h1>Stock<span class="tick">▼</span>Monitor</h1>
     <div class="stamp" id="stamp">caricamento…</div>
   </header>
+
+  <section class="semaforo" id="semaforo" hidden>
+    <span class="dot" id="semDot"></span>
+    <div class="semtxt"><b id="semTitle"></b><span id="semSub"></span></div>
+    <span class="sempct" id="semPct"></span>
+  </section>
 
   <section class="hero" id="hero" hidden>
     <div class="pct" id="heroPct"></div>
@@ -152,6 +175,7 @@
   <section class="list" aria-live="polite">
     <div class="rowh"><span>ticker</span><span>società</span>
       <span class="px" style="text-align:right">chiusura</span>
+      <span class="dm" style="text-align:right">dal max</span>
       <span style="text-align:right">variazione</span></div>
     <div id="rows"><div class="empty" id="msg">Caricamento dati…</div></div>
   </section>
@@ -160,7 +184,8 @@
   <div class="days" id="days"></div>
 
   <p class="note">Dati di chiusura EODHD · scansione automatica giornaliera ·
-     soglia predefinita −5% · <span id="genAt"></span></p>
+     soglia predefinita −5% · "dal max" = distanza dal massimo a 52 settimane
+     (giallo oltre −10%, rosso oltre −25%) · <span id="genAt"></span></p>
 </div>
 
 <script>
@@ -183,6 +208,24 @@
   $('genAt').textContent='ultimo aggiornamento: '+DATA.generated_at.replace('T',' ');
   $('csv').href=DATA.csv;
   ['hero','chips','controls','histTitle'].forEach(id=>$(id).hidden=false);
+
+  if(DATA.regime){
+    const CFG={
+      verde:['#3ECF9A','Semaforo verde — mercato in salute',
+             'Strategia normale: tranche piccole e uguali, vendi sul rimbalzo'],
+      giallo:['#F2B441','Semaforo giallo — correzione in corso',
+             'Tranche dimezzate, max 2 titoli, niente quote su posizioni in perdita'],
+      rosso:['#FF6B5E','Semaforo rosso — possibile mercato orso',
+             'Stop ai singoli titoli: riserva pronta per l\'indice, a rate']
+    }[DATA.regime.level];
+    if(CFG){
+      $('semDot').style.background=CFG[0];
+      $('semTitle').textContent=CFG[1];
+      $('semSub').textContent=CFG[2];
+      $('semPct').textContent='S&P 500: '+DATA.regime.pct.toFixed(1)+'% dal max 52 sett.';
+      $('semaforo').hidden=false;
+    }
+  }
 
   const markets=[...new Set(DATA.results.map(r=>r.exchange))].sort();
   for(const m of markets){const o=document.createElement('option');o.value=m;o.textContent=m;$('mkt').append(o);}
@@ -214,10 +257,13 @@
     }
     for(const r of rows){
       const d=document.createElement('div');d.className='row';
+      const dm=(r.dist_max==null||r.historic)?null:r.dist_max;
+      const dmCls=dm==null?'':(dm<=-25?' deep':(dm<=-10?' mid':''));
       d.innerHTML='<div class="bar" style="transform:scaleX('+(Math.abs(r.pct)/maxAbs)+')"></div>'
         +'<span class="t">'+r.ticker.split('.')[0]+'<small>'+r.exchange+'</small></span>'
         +'<span class="n" title="'+r.name+'">'+r.name+'</span>'
         +'<span class="px">'+(r.historic?'—':fmt(r.curr_close)+' <small>'+r.currency+'</small>')+'</span>'
+        +'<span class="dm'+dmCls+'">'+(dm==null?'—':dm.toFixed(1)+'%')+'</span>'
         +'<span class="p'+(r.pct>0?' up':'')+'">'+(r.pct>0?'+':'')+r.pct.toFixed(2)+'%</span>';
       box.append(d);
     }
