@@ -1,12 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-STOCK MONITOR v3.0 - Scansione Bulk EODHD
+STOCK MONITOR v3.2 - Scansione Bulk EODHD
 ==========================================
-Stessa logica del Monitor Robusto v2.4 (soglia -5%, stessa watchlist,
-stesso formato CSV), ma usa l'endpoint BULK di EODHD:
-1 richiesta per exchange invece di 1 richiesta per ticker.
-738 ticker su 7 mercati -> ~14-20 richieste totali, ~20 secondi.
+Novita' della v3.2 (rispetto alla v3.0/3.1):
+  1. SEMAFORO DI REGIME: misura quanto l'S&P 500 (tramite l'ETF SPY)
+     e' sceso dal suo massimo a 52 settimane e assegna un colore:
+       verde  = meno di -5%   -> strategia normale
+       giallo = tra -5% e -15% -> tranche dimezzate, prudenza
+       rosso  = oltre -15%    -> stop singoli titoli, riserva per l'indice
+  2. DISTANZA DAL MASSIMO: per ogni titolo in alert viene calcolata
+     la distanza dal massimo a 52 settimane (campo "dist_max"),
+     cosi' si vede se un -5% e' l'inizio della discesa o se il titolo
+     e' gia' molto giu' dal picco.
+Entrambe le novita' usano il campo hi_250d dell'endpoint bulk
+(parametro filter=extended): NESSUNA chiamata API aggiuntiva.
+
+Il resto e' identico alla v3.0: stessa watchlist, stessa soglia -5%,
+stesso formato CSV, stessi file di output.
 
 Output:
   docs/data.json                     -> dati completi per la dashboard
@@ -33,6 +44,11 @@ ALERT_THRESHOLD = float(os.environ.get("ALERT_THRESHOLD", "-5.0"))
 MAX_ABS_CHANGE = 50.0          # scarta variazioni anomale (come v2.4)
 HISTORY_DAYS = 90              # giorni di storico da conservare
 TIMEOUT = 60                   # timeout richieste HTTP (bulk = risposte grandi)
+
+# Soglie del semaforo di regime (distanza S&P 500 dal max 52 settimane)
+REGIME_YELLOW = -5.0           # sotto questa % scatta il giallo
+REGIME_RED = -15.0             # sotto questa % scatta il rosso
+REGIME_TICKER = "SPY"          # ETF S&P 500, presente nel bulk USA
 
 BASE = "https://eodhd.com/api"
 ROOT = Path(__file__).parent
@@ -78,48 +94,59 @@ def load_watchlist():
 def bulk_day(exchange, date=None):
     """Scarica l'intero exchange per un giorno.
     Prova le sigle alternative (EXCHANGE_ALIASES) finche' una risponde.
+    Chiede il formato "extended" (che include hi_250d, il massimo a
+    52 settimane); se per qualche motivo fallisse, riprova senza.
     Senza 'date' restituisce l'ultimo giorno disponibile.
-    Ritorna (data_effettiva, {base_ticker: close})."""
+    Ritorna (data_effettiva, {base_ticker: close}, {base_ticker: max_52w})."""
     candidates = ([RESOLVED[exchange]] if exchange in RESOLVED
                   else EXCHANGE_ALIASES.get(exchange, [exchange]))
     last_err = None
     for code in candidates:
-        params = {"api_token": API_KEY, "fmt": "json"}
-        if date:
-            params["date"] = date
-        try:
-            r = requests.get(f"{BASE}/eod-bulk-last-day/{code}",
-                             params=params, timeout=TIMEOUT)
-            r.raise_for_status()
-            data = r.json()
-        except Exception as e:
-            last_err = e
-            continue
-        if not isinstance(data, list) or not data:
-            continue
-        RESOLVED[exchange] = code
-        if code != exchange:
-            log(f"        (nota: per {exchange} il bulk usa la sigla '{code}')")
-        prices, day = {}, None
-        for item in data:
-            tick = str(item.get("code", "")).strip()
-            close = item.get("adjusted_close") or item.get("close")
-            d = item.get("date")
-            if not tick or close is None:
-                continue
+        for extended in (True, False):
+            params = {"api_token": API_KEY, "fmt": "json"}
+            if extended:
+                params["filter"] = "extended"
+            if date:
+                params["date"] = date
             try:
-                close = float(close)
-            except (TypeError, ValueError):
+                r = requests.get(f"{BASE}/eod-bulk-last-day/{code}",
+                                 params=params, timeout=TIMEOUT)
+                r.raise_for_status()
+                data = r.json()
+            except Exception as e:
+                last_err = e
                 continue
-            if close <= 0:
+            if not isinstance(data, list) or not data:
                 continue
-            prices[tick] = close
-            if d and (day is None or d > day):
-                day = d
-        return day, prices
+            RESOLVED[exchange] = code
+            if code != exchange:
+                log(f"        (nota: per {exchange} il bulk usa la sigla '{code}')")
+            prices, hi52, day = {}, {}, None
+            for item in data:
+                tick = str(item.get("code", "")).strip()
+                close = item.get("adjusted_close") or item.get("close")
+                d = item.get("date")
+                if not tick or close is None:
+                    continue
+                try:
+                    close = float(close)
+                except (TypeError, ValueError):
+                    continue
+                if close <= 0:
+                    continue
+                prices[tick] = close
+                try:
+                    hi = float(item.get("hi_250d") or 0)
+                    if hi > 0:
+                        hi52[tick] = hi
+                except (TypeError, ValueError):
+                    pass
+                if d and (day is None or d > day):
+                    day = d
+            return day, prices, hi52
     if last_err:
         raise last_err
-    return None, {}
+    return None, {}, {}
 
 
 def diagnose_exchange(keywords):
@@ -148,7 +175,7 @@ def previous_trading_day(exchange, curr_date):
         d = d - timedelta(days=1)
         if d.weekday() >= 5:          # sabato/domenica
             continue
-        day, prices = bulk_day(exchange, d.isoformat())
+        day, prices, _ = bulk_day(exchange, d.isoformat())
         if prices:
             return day or d.isoformat(), prices
     return None, {}
@@ -164,7 +191,7 @@ def scan():
 
     start = datetime.now()
     log("=" * 70)
-    log("STOCK MONITOR v3.0 - SCANSIONE BULK")
+    log("STOCK MONITOR v3.2 - SCANSIONE BULK")
     log("=" * 70)
     log(f"Avvio: {start:%Y-%m-%d %H:%M:%S}   Soglia alert: {ALERT_THRESHOLD}%")
 
@@ -174,11 +201,12 @@ def scan():
 
     results, errors, missing = [], [], []
     global_trade_date = None
+    regime = None
 
     for exchange in sorted(watch):
         names = watch[exchange]
         try:
-            curr_date, curr = bulk_day(exchange)              # ultimo giorno
+            curr_date, curr, hi52 = bulk_day(exchange)        # ultimo giorno
             if not curr:
                 raise RuntimeError("nessun dato ricevuto")
             prev_date, prev = previous_trading_day(exchange, curr_date)
@@ -193,6 +221,17 @@ def scan():
                 diagnose_exchange(["tokyo", "japan"])
             continue
 
+        # --- Semaforo di regime: SPY vs suo massimo 52 settimane ---
+        if exchange == "US":
+            spy_c, spy_h = curr.get(REGIME_TICKER), hi52.get(REGIME_TICKER)
+            if spy_c and spy_h:
+                rp = round((spy_c / spy_h - 1.0) * 100.0, 1)
+                level = ("verde" if rp > REGIME_YELLOW
+                         else "giallo" if rp > REGIME_RED
+                         else "rosso")
+                regime = {"index": "S&P 500 (SPY)", "pct": rp,
+                          "level": level, "date": curr_date}
+
         found = 0
         for base, (name, index) in names.items():
             pc, cc = prev.get(base), curr.get(base)
@@ -202,6 +241,9 @@ def scan():
             pct = (cc / pc - 1.0) * 100.0
             if abs(pct) > MAX_ABS_CHANGE:                     # sanity check
                 continue
+            hi = hi52.get(base)
+            dist_max = (round((cc / hi - 1.0) * 100.0, 1)
+                        if hi and cc <= hi * 1.05 else None)
             found += 1
             results.append({
                 "ticker": f"{base}.{exchange}", "name": name,
@@ -209,6 +251,7 @@ def scan():
                 "currency": CURRENCY.get(exchange, "USD"),
                 "prev_close": round(pc, 4), "curr_close": round(cc, 4),
                 "pct": round(pct, 2),
+                "dist_max": dist_max,
                 "prev_date": prev_date, "curr_date": curr_date,
             })
         if global_trade_date is None or (curr_date and curr_date > global_trade_date):
@@ -249,6 +292,7 @@ def scan():
         "total_watchlist": total_tickers,
         "total_analyzed": len(results),
         "alerts_count": len(alerts),
+        "regime": regime,
         "errors": errors,
         "missing": sorted(missing),
         "csv": f"reports/{csv_name}",
@@ -271,6 +315,7 @@ def scan():
         "count": len(alerts),
         "worst": alerts[0]["ticker"] if alerts else None,
         "worst_pct": alerts[0]["pct"] if alerts else None,
+        "regime": regime["level"] if regime else None,
         "alerts": [{"t": a["ticker"], "n": a["name"], "p": a["pct"]}
                    for a in alerts],
         "csv": f"reports/{csv_name}",
@@ -286,10 +331,17 @@ def scan():
     log("=" * 70)
     log(f"Tempo: {elapsed:.0f}s   Analizzati: {len(results)}/{total_tickers}"
         f"   Alert: {len(alerts)}")
+    if regime:
+        log(f"\nSEMAFORO: {regime['level'].upper()}  "
+            f"(S&P 500 a {regime['pct']:+.1f}% dal massimo 52 settimane)")
+    else:
+        log("\nSEMAFORO: non disponibile (SPY non trovato nei dati USA)")
     if alerts:
         log(f"\nTITOLI CON PERDITE <= {ALERT_THRESHOLD}%  ({trade_date}):")
         for a in alerts[:20]:
-            log(f"  {a['ticker']:15} {a['name'][:32]:32} {a['pct']:+7.2f}%")
+            dm = (f"  (dal max: {a['dist_max']:+.1f}%)"
+                  if a.get("dist_max") is not None else "")
+            log(f"  {a['ticker']:15} {a['name'][:32]:32} {a['pct']:+7.2f}%{dm}")
         if len(alerts) > 20:
             log(f"  ... e altri {len(alerts) - 20} (vedi CSV)")
         log(f"\nReport: docs/reports/{csv_name}")
