@@ -62,6 +62,7 @@ NERVOUS_ALERT = 15.0           # nervosismo: accesa con media alert 5gg >= 15
 NERVOUS_DAYS = 5               # giorni per la media del nervosismo
 VIX_TICKER = "VIX.INDX"        # indice della paura
 VIX_ALERT = 25.0               # VIX: accesa da 25 in su
+BREADTH_MIN = 100              # minimo titoli validi per calcolare l'ampiezza
 
 BASE = "https://eodhd.com/api"
 ROOT = Path(__file__).parent
@@ -237,6 +238,49 @@ def fetch_spy_ma200():
     return None, None
 
 
+def compute_breadth_us(us_tickers):
+    """Paracadute per la spia Ampiezza: se il bulk non fornisce le medie,
+    scarica lo storico dei titoli USA (1 chiamata per titolo, in parallelo)
+    e conta quanti stanno sopra la propria media a 200 giorni.
+    Ritorna (sopra, totale)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    frm = (datetime.now().date() - timedelta(days=320)).isoformat()
+
+    def one(base):
+        try:
+            r = requests.get(f"{BASE}/eod/{base}.US",
+                             params={"api_token": API_KEY, "fmt": "json",
+                                     "from": frm},
+                             timeout=TIMEOUT)
+            r.raise_for_status()
+            data = r.json()
+            closes = []
+            for row in data if isinstance(data, list) else []:
+                v = row.get("adjusted_close") or row.get("close")
+                try:
+                    v = float(v)
+                    if v > 0:
+                        closes.append(v)
+                except (TypeError, ValueError):
+                    pass
+            if len(closes) >= 200:
+                return closes[-1] > sum(closes[-200:]) / 200.0
+        except Exception:
+            pass
+        return None
+
+    above = total = 0
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        for res in pool.map(one, us_tickers):
+            if res is None:
+                continue
+            total += 1
+            if res:
+                above += 1
+    return above, total
+
+
 def previous_trading_day(exchange, curr_date):
     """Trova il giorno di borsa precedente a curr_date per l'exchange:
     prova all'indietro (salta i weekend) finche' il bulk risponde con dati."""
@@ -381,6 +425,14 @@ def scan():
 
     breadth_pct = round(br_above / br_total * 100.0, 1) if br_total else None
     vix = fetch_vix()
+
+    # paracadute Ampiezza: se il bulk non ha fornito le medie mobili,
+    # calcola l'ampiezza sui titoli USA scaricando i singoli storici
+    if breadth_pct is None and "US" in watch:
+        log("        (calcolo l'ampiezza dai singoli storici USA: ~1 minuto)")
+        ba, bt = compute_breadth_us(sorted(watch["US"].keys()))
+        if bt >= BREADTH_MIN:
+            breadth_pct = round(ba / bt * 100.0, 1)
 
     # paracadute Tendenza: se il bulk non ha fornito le medie mobili,
     # calcola la media 200 di SPY dallo storico (1 chiamata in piu')
