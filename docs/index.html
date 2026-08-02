@@ -51,6 +51,25 @@
   .spia.on .sdot{background:var(--amber)}
   .spia b{font-weight:600;color:inherit}
 
+  /* ---------- laboratorio del segnale (v3.4) ---------- */
+  .lab{margin-top:26px;padding:16px;border:1px solid var(--line);
+       border-radius:var(--radius);background:var(--panel)}
+  .lab h2{font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+       color:var(--muted);margin:0 0 4px}
+  .lab .labsub{font-size:11.5px;color:var(--muted);margin:0 0 12px}
+  .lab table{width:100%;border-collapse:collapse;font-size:12.5px}
+  .lab th{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+       color:var(--muted);font-weight:600;text-align:right;
+       padding:5px 8px;border-bottom:1px solid var(--line)}
+  .lab th:first-child{text-align:left}
+  .lab td{padding:7px 8px;text-align:right;font-family:var(--mono);
+       border-bottom:1px solid var(--line)}
+  .lab td:first-child{text-align:left;font-family:inherit;
+       color:var(--fg)}
+  .lab tr:last-child td{border-bottom:none}
+  .lab .g{color:var(--gain)} .lab .r{color:var(--loss)}
+  .lab .labwait{font-size:12px;color:var(--muted)}
+
   /* ---------- hero: peggiore del giorno ---------- */
   .hero{margin:20px 0 14px;padding:20px;border:1px solid var(--line);
         border-radius:var(--radius);background:var(--panel);
@@ -196,6 +215,12 @@
   <h2 id="histTitle" hidden>ultimi giorni</h2>
   <div class="days" id="days"></div>
 
+  <section class="lab" id="lab" hidden>
+    <h2>📊 Laboratorio del segnale</h2>
+    <p class="labsub" id="labSub"></p>
+    <div id="labBody"></div>
+  </section>
+
   <p class="note">Dati di chiusura EODHD · scansione automatica giornaliera ·
      soglia predefinita −5% · "dal max" = distanza dal massimo a 52 settimane
      (giallo oltre −10%, rosso oltre −25%) · <span id="genAt"></span></p>
@@ -255,6 +280,37 @@
         +'<b>'+ch[1]+'</b> '+ch[2]+'</span>').join('');
       $('spie').hidden=false;
     }
+  }
+
+  if(DATA.lab){
+    const L=DATA.lab;
+    const it=d=>{const p=d.split('-');return p[2]+'/'+p[1]+'/'+p[0];};
+    $('labSub').textContent=L.total+' alert registrati dal '+it(L.since)
+      +' — cosa fanno i titoli dopo l\'alert (aggiornato da solo ogni sera)';
+    const f=s=>!s?'<td>—</td><td>—</td><td>—</td>'
+      :'<td class="'+(s.avg>=0?'g':'r')+'">'+(s.avg>0?'+':'')+s.avg.toFixed(2)+'%</td>'
+      +'<td>'+s.pos.toFixed(0)+'%</td><td>'+s.n+'</td>';
+    let html='<table><tr><th>orizzonte</th><th>medio</th><th>positivi</th><th>casi</th></tr>';
+    [['Dopo 5 giorni','r5'],['Dopo 10 giorni','r10'],['Dopo 20 giorni','r20']]
+      .forEach(h=>{html+='<tr><td>'+h[0]+'</td>'+f(L.horizons[h[1]])+'</tr>';});
+    html+='</table>';
+    const B=L.bands||{};
+    if((B.fresco&&B.fresco.r5)||(B.intermedio&&B.intermedio.r5)||(B.profondo&&B.profondo.r5)){
+      html+='<table style="margin-top:12px"><tr><th>fascia "dal max" (a 5 giorni)</th>'
+        +'<th>medio</th><th>positivi</th><th>casi</th></tr>';
+      [['Freschi (sopra −10%)','fresco'],['Intermedi (−10/−25%)','intermedio'],
+       ['Profondi (oltre −25%)','profondo']]
+        .forEach(b=>{const g=B[b[1]];
+          html+='<tr><td>'+b[0]+'</td>'+f(g&&g.r5)+'</tr>';});
+      html+='</table>';
+    }
+    const anyData=['r5','r10','r20'].some(k=>L.horizons[k]);
+    if(!anyData){
+      html='<p class="labwait">In raccolta dati: i primi esiti compaiono '
+        +'dopo 5 giorni di borsa dal primo alert registrato.</p>';
+    }
+    $('labBody').innerHTML=html;
+    $('lab').hidden=false;
   }
 
   const markets=[...new Set(DATA.results.map(r=>r.exchange))].sort();
