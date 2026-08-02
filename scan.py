@@ -1,20 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-STOCK MONITOR v3.2 - Scansione Bulk EODHD
+STOCK MONITOR v3.3 - Scansione Bulk EODHD
 ==========================================
-Novita' della v3.2 (rispetto alla v3.0/3.1):
-  1. SEMAFORO DI REGIME: misura quanto l'S&P 500 (tramite l'ETF SPY)
-     e' sceso dal suo massimo a 52 settimane e assegna un colore:
+Novita' della v3.3 (rispetto alla v3.2):
+  LE SPIE DELL'ORSO - quattro pre-allarmi accanto al semaforo:
+    1. TENDENZA:   S&P 500 (SPY) sotto la sua media a 200 giorni
+    2. AMPIEZZA:   % dei titoli della watchlist sopra la propria media 200
+                   (sotto il 40% = struttura interna che si rompe)
+    3. NERVOSISMO: media degli alert giornalieri sugli ultimi 5 giorni
+                   (tanti campanelli = mercato nervoso sotto la superficie)
+    4. VIX:        l'indice della paura (sopra 25 = tensione alta)
+  Le prime tre usano dati gia' scaricati (zero chiamate API in piu');
+  il VIX costa 1 chiamata. Le spie non prevedono nulla: annunciano.
+  Il semaforo resta l'unico che decide le dosi.
+
+Novita' della v3.2:
+  1. SEMAFORO DI REGIME (S&P 500 vs massimo 52 settimane):
        verde  = meno di -5%   -> strategia normale
        giallo = tra -5% e -15% -> tranche dimezzate, prudenza
        rosso  = oltre -15%    -> stop singoli titoli, riserva per l'indice
-  2. DISTANZA DAL MASSIMO: per ogni titolo in alert viene calcolata
-     la distanza dal massimo a 52 settimane (campo "dist_max"),
-     cosi' si vede se un -5% e' l'inizio della discesa o se il titolo
-     e' gia' molto giu' dal picco.
-Entrambe le novita' usano il campo hi_250d dell'endpoint bulk
-(parametro filter=extended): NESSUNA chiamata API aggiuntiva.
+  2. DISTANZA DAL MASSIMO per ogni alert (campo "dist_max").
 
 Il resto e' identico alla v3.0: stessa watchlist, stessa soglia -5%,
 stesso formato CSV, stessi file di output.
@@ -49,6 +55,13 @@ TIMEOUT = 60                   # timeout richieste HTTP (bulk = risposte grandi)
 REGIME_YELLOW = -5.0           # sotto questa % scatta il giallo
 REGIME_RED = -15.0             # sotto questa % scatta il rosso
 REGIME_TICKER = "SPY"          # ETF S&P 500, presente nel bulk USA
+
+# Soglie delle spie dell'orso (v3.3)
+BREADTH_ALERT = 40.0           # ampiezza: accesa sotto il 40% sopra media 200
+NERVOUS_ALERT = 15.0           # nervosismo: accesa con media alert 5gg >= 15
+NERVOUS_DAYS = 5               # giorni per la media del nervosismo
+VIX_TICKER = "VIX.INDX"        # indice della paura
+VIX_ALERT = 25.0               # VIX: accesa da 25 in su
 
 BASE = "https://eodhd.com/api"
 ROOT = Path(__file__).parent
@@ -94,10 +107,10 @@ def load_watchlist():
 def bulk_day(exchange, date=None):
     """Scarica l'intero exchange per un giorno.
     Prova le sigle alternative (EXCHANGE_ALIASES) finche' una risponde.
-    Chiede il formato "extended" (che include hi_250d, il massimo a
-    52 settimane); se per qualche motivo fallisse, riprova senza.
+    Chiede il formato "extended" (che include hi_250d e le medie mobili
+    ema_50/ema_200); se per qualche motivo fallisse, riprova senza.
     Senza 'date' restituisce l'ultimo giorno disponibile.
-    Ritorna (data_effettiva, {base_ticker: close}, {base_ticker: max_52w})."""
+    Ritorna (data, {tick: close}, {"hi": max52w, "e50": ema50, "e200": ema200})."""
     candidates = ([RESOLVED[exchange]] if exchange in RESOLVED
                   else EXCHANGE_ALIASES.get(exchange, [exchange]))
     last_err = None
@@ -121,7 +134,8 @@ def bulk_day(exchange, date=None):
             RESOLVED[exchange] = code
             if code != exchange:
                 log(f"        (nota: per {exchange} il bulk usa la sigla '{code}')")
-            prices, hi52, day = {}, {}, None
+            prices, day = {}, None
+            extra = {"hi": {}, "e50": {}, "e200": {}}
             for item in data:
                 tick = str(item.get("code", "")).strip()
                 close = item.get("adjusted_close") or item.get("close")
@@ -135,18 +149,20 @@ def bulk_day(exchange, date=None):
                 if close <= 0:
                     continue
                 prices[tick] = close
-                try:
-                    hi = float(item.get("hi_250d") or 0)
-                    if hi > 0:
-                        hi52[tick] = hi
-                except (TypeError, ValueError):
-                    pass
+                for key, field in (("hi", "hi_250d"), ("e50", "ema_50"),
+                                   ("e200", "ema_200")):
+                    try:
+                        v = float(item.get(field) or 0)
+                        if v > 0:
+                            extra[key][tick] = v
+                    except (TypeError, ValueError):
+                        pass
                 if d and (day is None or d > day):
                     day = d
-            return day, prices, hi52
+            return day, prices, extra
     if last_err:
         raise last_err
-    return None, {}, {}
+    return None, {}, {"hi": {}, "e50": {}, "e200": {}}
 
 
 def diagnose_exchange(keywords):
@@ -165,6 +181,26 @@ def diagnose_exchange(keywords):
                     f"{ex.get('Name')} ({ex.get('Country')})")
     except Exception as e:
         log(f"        (diagnostica non riuscita: {str(e)[:80]})")
+
+
+def fetch_vix():
+    """Scarica l'ultimo valore del VIX (1 chiamata API).
+    Ritorna un float, oppure None se non disponibile."""
+    try:
+        frm = (datetime.now().date() - timedelta(days=14)).isoformat()
+        r = requests.get(f"{BASE}/eod/{VIX_TICKER}",
+                         params={"api_token": API_KEY, "fmt": "json",
+                                 "from": frm},
+                         timeout=TIMEOUT)
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, list) and data:
+            v = data[-1].get("adjusted_close") or data[-1].get("close")
+            v = float(v)
+            return v if v > 0 else None
+    except Exception as e:
+        log(f"        (VIX non disponibile: {str(e)[:80]})")
+    return None
 
 
 def previous_trading_day(exchange, curr_date):
@@ -191,7 +227,7 @@ def scan():
 
     start = datetime.now()
     log("=" * 70)
-    log("STOCK MONITOR v3.2 - SCANSIONE BULK")
+    log("STOCK MONITOR v3.3 - SCANSIONE BULK")
     log("=" * 70)
     log(f"Avvio: {start:%Y-%m-%d %H:%M:%S}   Soglia alert: {ALERT_THRESHOLD}%")
 
@@ -202,11 +238,13 @@ def scan():
     results, errors, missing = [], [], []
     global_trade_date = None
     regime = None
+    spy_trend = None          # spia tendenza: SPY vs media 200
+    br_above, br_total = 0, 0  # spia ampiezza: titoli sopra la media 200
 
     for exchange in sorted(watch):
         names = watch[exchange]
         try:
-            curr_date, curr, hi52 = bulk_day(exchange)        # ultimo giorno
+            curr_date, curr, ex = bulk_day(exchange)          # ultimo giorno
             if not curr:
                 raise RuntimeError("nessun dato ricevuto")
             prev_date, prev = previous_trading_day(exchange, curr_date)
@@ -221,9 +259,9 @@ def scan():
                 diagnose_exchange(["tokyo", "japan"])
             continue
 
-        # --- Semaforo di regime: SPY vs suo massimo 52 settimane ---
+        # --- Semaforo di regime + spia tendenza: SPY ---
         if exchange == "US":
-            spy_c, spy_h = curr.get(REGIME_TICKER), hi52.get(REGIME_TICKER)
+            spy_c, spy_h = curr.get(REGIME_TICKER), ex["hi"].get(REGIME_TICKER)
             if spy_c and spy_h:
                 rp = round((spy_c / spy_h - 1.0) * 100.0, 1)
                 level = ("verde" if rp > REGIME_YELLOW
@@ -231,6 +269,11 @@ def scan():
                          else "rosso")
                 regime = {"index": "S&P 500 (SPY)", "pct": rp,
                           "level": level, "date": curr_date}
+            spy_e200 = ex["e200"].get(REGIME_TICKER)
+            if spy_c and spy_e200:
+                sopra = spy_c > spy_e200
+                spy_trend = {"on": not sopra,
+                             "pct": round((spy_c / spy_e200 - 1.0) * 100.0, 1)}
 
         found = 0
         for base, (name, index) in names.items():
@@ -241,9 +284,14 @@ def scan():
             pct = (cc / pc - 1.0) * 100.0
             if abs(pct) > MAX_ABS_CHANGE:                     # sanity check
                 continue
-            hi = hi52.get(base)
+            hi = ex["hi"].get(base)
             dist_max = (round((cc / hi - 1.0) * 100.0, 1)
                         if hi and cc <= hi * 1.05 else None)
+            e2 = ex["e200"].get(base)                # spia ampiezza
+            if e2:
+                br_total += 1
+                if cc > e2:
+                    br_above += 1
             found += 1
             results.append({
                 "ticker": f"{base}.{exchange}", "name": name,
@@ -283,6 +331,34 @@ def scan():
                         f"{a['prev_close']:.2f}", f"{a['curr_close']:.2f}",
                         f"{a['pct']:.2f}%"])
 
+    # ---- Le spie dell'orso (v3.3) ----
+    hist_file = DOCS / "history.json"
+    history = []
+    if hist_file.exists():
+        try:
+            history = json.loads(hist_file.read_text(encoding="utf-8"))
+        except Exception:
+            history = []
+
+    # nervosismo: media alert degli ultimi NERVOUS_DAYS giorni (incluso oggi)
+    prev_counts = [h.get("count", 0) for h in sorted(history, key=lambda h: h["date"])
+                   if h.get("date") != trade_date][-(NERVOUS_DAYS - 1):]
+    media5 = round((sum(prev_counts) + len(alerts)) / (len(prev_counts) + 1), 1)
+
+    breadth_pct = round(br_above / br_total * 100.0, 1) if br_total else None
+    vix = fetch_vix()
+
+    spie = {
+        "tendenza": ({"on": spy_trend["on"], "pct": spy_trend["pct"]}
+                     if spy_trend else None),
+        "ampiezza": ({"on": breadth_pct < BREADTH_ALERT, "pct": breadth_pct}
+                     if breadth_pct is not None else None),
+        "nervosismo": {"on": media5 >= NERVOUS_ALERT, "media": media5,
+                       "giorni": len(prev_counts) + 1},
+        "vix": ({"on": vix >= VIX_ALERT, "value": round(vix, 1)}
+                if vix is not None else None),
+    }
+
     # ---- data.json per la dashboard ----
     DOCS.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -293,6 +369,7 @@ def scan():
         "total_analyzed": len(results),
         "alerts_count": len(alerts),
         "regime": regime,
+        "spie": spie,
         "errors": errors,
         "missing": sorted(missing),
         "csv": f"reports/{csv_name}",
@@ -302,13 +379,6 @@ def scan():
         json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
     # ---- history.json (storico compatto) ----
-    hist_file = DOCS / "history.json"
-    history = []
-    if hist_file.exists():
-        try:
-            history = json.loads(hist_file.read_text(encoding="utf-8"))
-        except Exception:
-            history = []
     history = [h for h in history if h.get("date") != trade_date]
     history.append({
         "date": trade_date,
@@ -336,6 +406,24 @@ def scan():
             f"(S&P 500 a {regime['pct']:+.1f}% dal massimo 52 settimane)")
     else:
         log("\nSEMAFORO: non disponibile (SPY non trovato nei dati USA)")
+    log("SPIE DELL'ORSO:")
+    if spie["tendenza"]:
+        st = spie["tendenza"]
+        log(f"  Tendenza:   {'ACCESA' if st['on'] else 'spenta '}  "
+            f"(SPY a {st['pct']:+.1f}% dalla media 200 giorni)")
+    if spie["ampiezza"]:
+        sa = spie["ampiezza"]
+        log(f"  Ampiezza:   {'ACCESA' if sa['on'] else 'spenta '}  "
+            f"({sa['pct']:.0f}% dei titoli sopra la propria media 200)")
+    sn = spie["nervosismo"]
+    log(f"  Nervosismo: {'ACCESO' if sn['on'] else 'spento '}  "
+        f"(media {sn['media']} alert/giorno su {sn['giorni']} giorni)")
+    if spie["vix"]:
+        sv = spie["vix"]
+        log(f"  VIX:        {'ACCESO' if sv['on'] else 'spento '}  "
+            f"(valore {sv['value']})")
+    else:
+        log("  VIX:        n/d")
     if alerts:
         log(f"\nTITOLI CON PERDITE <= {ALERT_THRESHOLD}%  ({trade_date}):")
         for a in alerts[:20]:
