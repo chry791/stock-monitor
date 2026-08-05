@@ -1,0 +1,43 @@
+name: Anteprima serale
+
+on:
+  schedule:
+    - cron: '15 19 * * 1-5'  # 21:15 italiane (estate; 20:15 in inverno), lun-ven
+  workflow_dispatch: {}      # pulsante "Run workflow" anche per questa
+
+permissions:
+  contents: write
+
+concurrency:
+  group: scan-live
+  cancel-in-progress: false
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Dipendenze
+        run: pip install requests
+
+      - name: Anteprima serale
+        env:
+          EOD_API_KEY: ${{ secrets.EOD_API_KEY }}
+        run: python scan_live.py
+
+      - name: Pubblica anteprima
+        run: |
+          git config user.name  "stock-monitor-bot"
+          git config user.email "actions@github.com"
+          git pull --rebase origin main
+          git add docs/live.json
+          git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
+          git commit -m "Anteprima serale $(date -u +%F)"
+          git push
