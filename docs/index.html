@@ -70,6 +70,30 @@
   .lab .g{color:var(--gain)} .lab .r{color:var(--loss)}
   .lab .labwait{font-size:12px;color:var(--muted)}
 
+  /* ---------- anteprima serale (v3.5) ---------- */
+  .liveP{margin:14px 0 4px;padding:14px 16px;border:1px dashed rgba(242,180,65,.55);
+        border-radius:var(--radius);background:var(--panel)}
+  .liveP h2{margin:0 0 2px;font-size:12px;font-family:var(--mono);
+        color:var(--amber);text-transform:uppercase;letter-spacing:.14em}
+  .liveP .livesub{font-size:11.5px;color:var(--muted);margin:0 0 10px}
+  .liveP .lrow{display:grid;grid-template-columns:96px 1fr 76px 90px;gap:10px;
+        align-items:center;padding:8px 2px;border-top:1px solid var(--line)}
+  .liveP .lrow .t{font-family:var(--mono);font-size:13px;color:var(--amber)}
+  .liveP .lrow .n{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;
+        white-space:nowrap}
+  .liveP .lrow .dm{font-family:var(--mono);font-size:12px;color:var(--muted);
+        text-align:right}
+  .liveP .lrow .dm.mid{color:var(--amber)} .liveP .lrow .dm.deep{color:var(--loss)}
+  .liveP .lrow .p{font-family:var(--mono);font-weight:600;font-size:14px;
+        color:var(--loss);text-align:right}
+  .liveP .livenote{margin-top:10px;font-size:11px;color:var(--muted)}
+  .liveP .livezero{padding:6px 2px;font-family:var(--mono);font-size:12.5px;
+        color:var(--muted)}
+  @media (max-width:560px){
+    .liveP .lrow{grid-template-columns:80px 1fr 84px}
+    .liveP .lrow .dm{display:none}
+  }
+
   /* ---------- hero: peggiore del giorno ---------- */
   .hero{margin:20px 0 14px;padding:20px;border:1px solid var(--line);
         border-radius:var(--radius);background:var(--panel);
@@ -177,6 +201,15 @@
   </section>
 
   <div class="spie" id="spie" hidden></div>
+
+  <section class="liveP" id="liveP" hidden>
+    <h2>🌙 Stasera a Wall Street — anteprima live</h2>
+    <p class="livesub" id="liveSub"></p>
+    <div id="liveRows"></div>
+    <p class="livenote">Prezzi con 15 min di ritardo · "dal max" stimato ·
+      ordini su gettex fino alle 22:00 · questa lista NON entra nel registro:
+      il report ufficiale resta quello delle chiusure, qui sotto.</p>
+  </section>
 
   <section class="hero" id="hero" hidden>
     <div class="pct" id="heroPct"></div>
@@ -312,6 +345,34 @@
     $('labBody').innerHTML=html;
     $('lab').hidden=false;
   }
+
+  // ---------- anteprima serale (v3.5): visibile solo se fresca ----------
+  try{
+    const L=await (await fetch('live.json?'+Date.now())).json();
+    const age=Date.now()-new Date(L.generated_at).getTime();
+    if(age>=0 && age<6*3600*1000){                 // entro 6 ore dalla scansione
+      const hh=new Date(L.generated_at).toLocaleTimeString('it-IT',
+        {hour:'2-digit',minute:'2-digit'});
+      $('liveSub').textContent='Mercato USA aperto adesso — variazioni di OGGI '
+        +'rispetto a ieri (aggiornata alle '+hh+', '+L.analyzed+' titoli)';
+      if(L.results && L.results.length){
+        $('liveRows').innerHTML=L.results.map(r=>{
+          const dm=r.dist_max;
+          const c=dm==null?'':(dm<=-25?' deep':(dm<=-10?' mid':''));
+          return '<div class="lrow">'
+            +'<span class="t">'+r.ticker.split('.')[0]+'</span>'
+            +'<span class="n" title="'+r.name+'">'+r.name+'</span>'
+            +'<span class="dm'+c+'">'+(dm==null?'—':dm.toFixed(1)+'%')+'</span>'
+            +'<span class="p">'+r.pct.toFixed(2)+'%</span>'
+            +'</div>';
+        }).join('');
+      }else{
+        $('liveRows').innerHTML='<div class="livezero">Nessun titolo USA sotto '
+          +L.threshold.toFixed(1)+'% in questo momento ✓</div>';
+      }
+      $('liveP').hidden=false;
+    }
+  }catch(e){}
 
   const markets=[...new Set(DATA.results.map(r=>r.exchange))].sort();
   for(const m of markets){const o=document.createElement('option');o.value=m;o.textContent=m;$('mkt').append(o);}
