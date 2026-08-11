@@ -2,7 +2,8 @@ name: Anteprima serale
 
 on:
   schedule:
-    - cron: '15 19 * * 1-5'  # 21:15 italiane (estate; 20:15 in inverno), lun-ven
+    - cron: '55 14 * * 1-5'  # EUROPA ~16:55 italiane (estate), lun-ven
+    - cron: '15 19 * * 1-5'  # USA ~21:15 italiane (estate; 20:15 in inverno), lun-ven
   workflow_dispatch: {}      # pulsante "Run workflow" anche per questa
 
 permissions:
