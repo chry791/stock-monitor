@@ -203,7 +203,7 @@
   <div class="spie" id="spie" hidden></div>
 
   <section class="liveP" id="liveP" hidden>
-    <h2>🌙 Stasera a Wall Street — anteprima live</h2>
+    <h2 id="liveTitle">🌙 Anteprima live</h2>
     <p class="livesub" id="liveSub"></p>
     <div id="liveRows"></div>
     <p class="livenote">Prezzi con 15 min di ritardo · "dal max" stimato ·
@@ -353,7 +353,13 @@
     if(age>=0 && age<6*3600*1000){                 // entro 6 ore dalla scansione
       const hh=new Date(L.generated_at).toLocaleTimeString('it-IT',
         {hour:'2-digit',minute:'2-digit'});
-      $('liveSub').textContent='Mercato USA aperto adesso — variazioni di OGGI '
+      const EU=(L.market==='Europa');
+      $('liveTitle').textContent=EU
+        ?'🌇 Ultima ora d\u2019Europa — anteprima live'
+        :'🌙 Stasera a Wall Street — anteprima live';
+      $('liveSub').textContent=(EU
+        ?'Borse europee in chiusura (17:30) — variazioni di OGGI '
+        :'Mercato USA aperto adesso — variazioni di OGGI ')
         +'rispetto a ieri (aggiornata alle '+hh+', '+L.analyzed+' titoli)';
       if(L.results && L.results.length){
         $('liveRows').innerHTML=L.results.map(r=>{
