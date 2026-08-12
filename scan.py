@@ -398,6 +398,30 @@ def previous_trading_day(exchange, curr_date):
 # ============================================================
 # SCANSIONE
 # ============================================================
+def is_split_artifact(ticker, trade_date, pct):
+    """Vaccino anti-frazionamento (v3.7, caso Monster 11/8/2026).
+    Per i crolli estremi (<= -30%) interroga l'endpoint splits di EODHD:
+    se il titolo ha frazionato proprio quel giorno, l'alert e' un artefatto
+    del prezzo dimezzato/frazionato e va scartato (il titolo non e' crollato).
+    Costo: una chiamata API solo per gli alert estremi (rarissimi)."""
+    if pct > -30.0:
+        return False
+    try:
+        r = requests.get(f"{BASE}/splits/{ticker}",
+                         params={"api_token": API_KEY, "fmt": "json",
+                                 "from": trade_date, "to": trade_date},
+                         timeout=20)
+        r.raise_for_status()
+        data = r.json()
+        if isinstance(data, list) and len(data) > 0:
+            log(f"   SPLIT rilevato su {ticker} il {trade_date} "
+                f"({data[0].get('split','?')}): alert scartato, falso crollo")
+            return True
+    except Exception:
+        pass          # in dubbio non scarto: meglio un falso alert che un buco
+    return False
+
+
 def scan():
     if not API_KEY:
         log("ERRORE: variabile d'ambiente EOD_API_KEY mancante.")
@@ -497,6 +521,8 @@ def scan():
             break
         if r["ticker"] not in seen:
             seen.add(r["ticker"])
+            if is_split_artifact(r["ticker"], r["curr_date"], r["pct"]):
+                continue
             alerts.append(r)
 
     # ---- CSV: formato identico al v2.4 ----
