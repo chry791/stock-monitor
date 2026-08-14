@@ -1,1 +1,1 @@
-{"generated_at": "2026-08-14T17:41:32+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
+{"generated_at": "2026-08-14T19:15:32+00:00", "market": "USA", "threshold": -5.0, "analyzed": 544, "count": 2, "results": [{"ticker": "AVGO.US", "name": "Broadcom Inc", "price": 389.69, "prev_close": 417.82, "pct": -6.73, "dist_max": -19.0}, {"ticker": "AMAT.US", "name": "Applied Materials", "price": 505.66, "prev_close": 534.54, "pct": -5.4, "dist_max": -30.1}]}
