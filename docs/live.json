@@ -1,1 +1,1 @@
-{"generated_at": "2026-08-25T19:43:10+00:00", "market": "USA", "threshold": -5.0, "analyzed": 544, "count": 2, "results": [{"ticker": "BBWI.US", "name": "Bath & Body Works", "price": 17.75, "prev_close": 19.17, "pct": -7.41, "dist_max": -41.9}, {"ticker": "ALB.US", "name": "Albemarle Corp", "price": 132.97, "prev_close": 141.51, "pct": -6.03, "dist_max": -38.2}]}
+{"generated_at": "2026-08-26T14:55:18+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
