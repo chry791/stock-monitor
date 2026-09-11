@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-11T17:56:38+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
+{"generated_at": "2026-09-11T19:15:34+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 1, "results": [{"ticker": "FMC.US", "name": "FMC Corp", "price": 11.31, "prev_close": 12.08, "pct": -6.37, "dist_max": -69.5}]}
