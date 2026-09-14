@@ -1,0 +1,47 @@
+Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
+SFTBY.US,SoftBank Group (ADR),US,USD,21.65,18.39,-15.06%
+GLW.US,Corning Inc,US,USD,166.40,143.60,-13.70%
+TER.US,Teradyne Inc,US,USD,379.72,329.20,-13.30%
+COHR.US,Coherent Corp,US,USD,305.37,266.50,-12.73%
+HPE.US,Hewlett Packard Enterprise,US,USD,62.09,55.41,-10.76%
+SWKS.US,Skyworks Solutions,US,USD,88.35,79.26,-10.29%
+LITE.US,Lumentum Holdings,US,USD,927.03,835.03,-9.92%
+GEV.US,GE Vernova,US,USD,957.27,874.76,-8.62%
+CIEN.US,Ciena Corp,US,USD,349.54,319.64,-8.55%
+SMCI.US,Super Micro Computer,US,USD,40.10,36.74,-8.38%
+LRCX.US,Lam Research,US,USD,298.22,273.49,-8.29%
+ENR.XETRA,Siemens Energy,XETRA,EUR,144.26,132.66,-8.04%
+IFX.XETRA,Infineon Technologies,XETRA,EUR,58.56,54.04,-7.72%
+ETN.US,Eaton Corp,US,USD,425.37,393.16,-7.57%
+QRVO.US,Qorvo Inc,US,USD,116.65,107.98,-7.43%
+MPWR.US,Monolithic Power,US,USD,1234.46,1143.24,-7.39%
+CEG.US,Constellation Energy,US,USD,284.75,264.57,-7.09%
+AMAT.US,Applied Materials,US,USD,456.49,424.21,-7.07%
+KEYS.US,Keysight Technologies,US,USD,338.64,314.96,-6.99%
+PRYMY.US,Prysmian (ADR),US,USD,73.40,68.43,-6.77%
+LR.PA,Legrand,PA,EUR,141.85,132.35,-6.70%
+STMPA.PA,STMicroelectronics,PA,EUR,44.67,41.73,-6.58%
+SU.PA,Schneider Electric,PA,EUR,291.10,272.05,-6.54%
+ACS.MC,ACS,MC,EUR,98.25,91.85,-6.51%
+APH.US,Amphenol Corp,US,USD,83.92,78.55,-6.40%
+KLAC.US,KLA Corp,US,USD,180.64,169.09,-6.39%
+ASML.AS,ASML Holding,AS,EUR,1478.40,1387.80,-6.13%
+JBL.US,Jabil Inc,US,USD,318.08,298.72,-6.09%
+ANET.US,Arista Networks,US,USD,199.59,187.81,-5.90%
+ON.US,ON Semiconductor,US,USD,76.14,71.65,-5.90%
+ANA.MC,Acciona,MC,EUR,208.20,196.40,-5.67%
+JCI.US,Johnson Controls,US,USD,146.01,137.76,-5.65%
+MRL.MC,Merlin Properties,MC,EUR,13.12,12.38,-5.64%
+INTC.US,Intel Corp,US,USD,102.94,97.19,-5.59%
+HLMA.LSE,Halma,LSE,GBX,3634.00,3432.00,-5.56%
+NTAP.US,NetApp Inc,US,USD,199.28,188.28,-5.52%
+ANTO.LSE,Antofagasta,LSE,GBX,3790.00,3586.00,-5.38%
+GNRC.US,Generac Holdings,US,USD,186.99,176.98,-5.35%
+MU.US,Micron Technology,US,USD,975.26,924.03,-5.25%
+NXPI.US,NXP Semiconductors,US,USD,236.62,224.23,-5.24%
+VST.US,Vistra Corp,US,USD,148.38,140.73,-5.16%
+TOELY.US,Tokyo Electron (ADR),US,USD,169.71,160.97,-5.15%
+BAC.US,Bank of America,US,USD,62.69,59.47,-5.14%
+MRAAY.US,Murata (ADR),US,USD,24.24,23.01,-5.07%
+ATEYY.US,Advantest (ADR),US,USD,209.08,198.50,-5.06%
+DLR.US,Digital Realty,US,USD,188.58,179.14,-5.01%
