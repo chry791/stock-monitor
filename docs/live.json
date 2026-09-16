@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-16T14:55:24+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
+{"generated_at": "2026-09-16T18:28:44+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 2, "results": [{"ticker": "JBHT.US", "name": "J.B. Hunt Transport", "price": 239.19, "prev_close": 273.05, "pct": -12.4, "dist_max": -19.7}, {"ticker": "FANG.US", "name": "Diamondback Energy", "price": 196.74, "prev_close": 211.53, "pct": -6.99, "dist_max": -7.0}]}
