@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-17T18:36:41+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 0, "results": []}
+{"generated_at": "2026-09-17T19:15:35+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 2, "results": [{"ticker": "FMC.US", "name": "FMC Corp", "price": 10.21, "prev_close": 10.8, "pct": -5.51, "dist_max": -71.6}, {"ticker": "TMUS.US", "name": "T-Mobile US", "price": 167.29, "prev_close": 176.26, "pct": -5.09, "dist_max": -28.6}]}
