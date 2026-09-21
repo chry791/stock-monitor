@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-21T14:55:18+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
+{"generated_at": "2026-09-21T19:15:33+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 1, "results": [{"ticker": "MHK.US", "name": "Mohawk Industries", "price": 118.4, "prev_close": 126.09, "pct": -6.1, "dist_max": -15.5}]}
