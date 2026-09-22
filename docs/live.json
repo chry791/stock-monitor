@@ -1,1 +1,1 @@
-{"generated_at": "2026-09-21T22:33:45+00:00", "market": "USA", "threshold": -5.0, "analyzed": 542, "count": 2, "results": [{"ticker": "MHK.US", "name": "Mohawk Industries", "price": 117.27, "prev_close": 126.09, "pct": -7.0, "dist_max": -16.3}, {"ticker": "MPC.US", "name": "Marathon Petroleum", "price": 402.38, "prev_close": 424.89, "pct": -5.3, "dist_max": -5.3}]}
+{"generated_at": "2026-09-22T14:55:21+00:00", "market": "Europa", "threshold": -5.0, "analyzed": 233, "count": 0, "results": []}
