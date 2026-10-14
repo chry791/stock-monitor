@@ -1,0 +1,25 @@
+Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
+CIEN.US,Ciena Corp,US,USD,400.40,359.60,-10.19%
+LITE.US,Lumentum Holdings,US,USD,987.99,896.33,-9.28%
+COHR.US,Coherent Corp,US,USD,289.98,263.32,-9.19%
+ORCL.US,Oracle Corp,US,USD,143.20,130.55,-8.83%
+SMCI.US,Super Micro Computer,US,USD,39.07,35.78,-8.42%
+ENPH.US,Enphase Energy,US,USD,32.03,29.35,-8.37%
+HPE.US,Hewlett Packard Enterprise,US,USD,68.81,63.11,-8.28%
+AKAM.US,Akamai Technologies,US,USD,99.93,91.71,-8.23%
+GNRC.US,Generac Holdings,US,USD,214.29,198.06,-7.57%
+JBL.US,Jabil Inc,US,USD,317.86,293.91,-7.53%
+PRYMY.US,Prysmian (ADR),US,USD,67.82,62.98,-7.14%
+NTAP.US,NetApp Inc,US,USD,239.01,222.20,-7.03%
+SFTBY.US,SoftBank Group (ADR),US,USD,17.27,16.08,-6.89%
+VST.US,Vistra Corp,US,USD,162.36,151.79,-6.51%
+GEV.US,GE Vernova,US,USD,1004.04,941.78,-6.20%
+NRG.US,NRG Energy,US,USD,107.18,100.85,-5.91%
+MPWR.US,Monolithic Power,US,USD,1319.55,1243.11,-5.79%
+AMD.US,Advanced Micro Devices,US,USD,605.53,570.82,-5.73%
+PANW.US,Palo Alto Networks,US,USD,397.03,375.04,-5.54%
+CEG.US,Constellation Energy,US,USD,295.79,279.54,-5.49%
+TER.US,Teradyne Inc,US,USD,380.29,359.44,-5.48%
+ENR.XETRA,Siemens Energy,XETRA,EUR,143.06,135.28,-5.44%
+ARE.US,Alexandria Real Estate,US,USD,43.82,41.50,-5.29%
+GLW.US,Corning Inc,US,USD,148.54,140.89,-5.15%
