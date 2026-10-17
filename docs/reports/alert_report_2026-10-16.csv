@@ -1,7 +1,6 @@
 Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
 SFTBY.US,SoftBank Group (ADR),US,USD,16.33,14.70,-9.98%
 SMCI.US,Super Micro Computer,US,USD,35.09,31.63,-9.86%
-NJDCY.US,Nidec (ADR),US,USD,2.88,2.60,-9.63%
 MRNA.US,Moderna Inc,US,USD,236.50,218.01,-7.82%
 ATEYY.US,Advantest (ADR),US,USD,226.57,209.00,-7.75%
 PANW.US,Palo Alto Networks,US,USD,370.27,342.00,-7.63%
@@ -17,6 +16,7 @@ HPE.US,Hewlett Packard Enterprise,US,USD,58.63,55.13,-5.97%
 AMD.US,Advanced Micro Devices,US,USD,562.23,528.75,-5.95%
 INTC.US,Intel Corp,US,USD,95.37,89.85,-5.79%
 MU.US,Micron Technology,US,USD,931.24,878.84,-5.63%
+NJDCY.US,Nidec (ADR),US,USD,2.75,2.60,-5.45%
 RNECY.US,Renesas (ADR),US,USD,9.78,9.26,-5.32%
 TER.US,Teradyne Inc,US,USD,343.21,325.00,-5.31%
 LITE.US,Lumentum Holdings,US,USD,869.54,824.13,-5.22%
