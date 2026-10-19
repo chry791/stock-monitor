@@ -2,15 +2,27 @@ name: Anteprima serale
 
 on:
   schedule:
-    - cron: '55 14 * * 1-5'  # EUROPA ~16:55 italiane (estate), lun-ven
-    - cron: '15 19 * * 1-5'  # USA ~21:15 italiane (estate; 20:15 in inverno), lun-ven
-  workflow_dispatch: {}      # pulsante "Run workflow" anche per questa
+    - cron: '55 16 * * 1-5'  # Europa: 16:55 Madrid, estate e inverno
+      timezone: Europe/Madrid
+    - cron: '15 15 * * 1-5'  # USA: 15:15 New York, normalmente 21:15 Madrid
+      timezone: America/New_York
+  workflow_dispatch:
+    inputs:
+      market:
+        description: 'Mercato (auto sceglie in base all’orario di Madrid)'
+        type: choice
+        required: false
+        default: auto
+        options:
+          - auto
+          - eu
+          - us
 
 permissions:
   contents: write
 
 concurrency:
-  group: scan-live
+  group: stock-monitor-data
   cancel-in-progress: false
 
 jobs:
@@ -19,6 +31,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Python
         uses: actions/setup-python@v5
@@ -31,6 +46,7 @@ jobs:
       - name: Anteprima serale
         env:
           EOD_API_KEY: ${{ secrets.EOD_API_KEY }}
+          MARKETS: ${{ github.event_name == 'schedule' && (github.event.schedule == '55 16 * * 1-5' && 'eu' || 'us') || inputs.market || 'auto' }}
         run: python scan_live.py
 
       - name: Pubblica anteprima

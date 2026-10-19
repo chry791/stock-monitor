@@ -2,15 +2,17 @@ name: Scansione giornaliera
 
 on:
   schedule:
-    - cron: '0 21 * * 1-5'   # 23:00 italiane (estate), lun-ven sera
-    - cron: '45 5 * * 2-6'   # 7:45 italiane, giro di sicurezza al mattino
+    - cron: '15 23 * * 1-5'  # 23:15 Madrid, anche dopo il cambio ora
+      timezone: Europe/Madrid
+    - cron: '45 7 * * 2-6'   # 07:45 Madrid, giro di sicurezza
+      timezone: Europe/Madrid
   workflow_dispatch: {}      # il TUO pulsante "Run workflow"
 
 permissions:
   contents: write
 
 concurrency:
-  group: scan
+  group: stock-monitor-data
   cancel-in-progress: false
 
 jobs:
@@ -19,6 +21,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Python
         uses: actions/setup-python@v5
@@ -40,4 +45,5 @@ jobs:
           git add docs/
           git diff --cached --quiet && echo "Nessun cambiamento" && exit 0
           git commit -m "Scansione $(date -u +%F)"
+          git pull --rebase origin main
           git push
