@@ -1,8 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-STOCK MONITOR v3.4 - Scansione Bulk EODHD
+STOCK MONITOR v4.0 - Scansione Bulk EODHD
 ==========================================
+Novita' della v4.0 (Metodo v2.0, vedi MANUALE_METODO_v2.md):
+  LE QUATTRO FASI DEL MERCATO - decidono le regole di acquisto:
+    TORO     = S&P 500 sopra la media 200 e media in salita
+    CADUTA   = S&P 500 sotto la media 200, ma media ancora in salita
+    ORSO     = S&P 500 sotto la media 200 e media in discesa
+    RIPRESA  = S&P 500 sopra la media 200, ma media ancora in discesa
+  ("media in salita" = media 200 di oggi piu' alta di 20 sedute fa)
+  Il dashboard mostra la fase e il piano: quota, aggiunte, obiettivo,
+  scadenza e tetto, in percentuale e in euro (CONTO_EUR). 1 chiamata API.
+
 Novita' della v3.4 (rispetto alla v3.3):
   IL LABORATORIO DEL SEGNALE - registro automatico degli alert:
     - ogni alert (comprato o no) viene salvato in docs/registro.json
@@ -75,6 +85,21 @@ NERVOUS_DAYS = 5               # giorni per la media del nervosismo
 VIX_TICKER = "VIX.INDX"        # indice della paura
 VIX_ALERT = 25.0               # VIX: accesa da 25 in su
 BREADTH_MIN = 100              # minimo titoli validi per calcolare l'ampiezza
+
+# Metodo v2.0 - fasi del mercato (v4.0)
+CONTO_EUR = 64700              # valore del conto in euro: AGGIORNALO il 1 del mese
+FASE_PENDENZA = 20             # sedute per misurare se la media 200 sale o scende
+FILTRO_DAL_MAX = -10.0         # si compra solo se il titolo e' almeno -10% dal max
+REGOLE_FASE = {
+    "toro":    {"nome": "TORO", "quota": 2.5, "aggiunte": [-5, -10],
+                "obiettivo": 2.0, "scadenza": 10, "tetto": 70},
+    "ripresa": {"nome": "RIPRESA", "quota": 2.5, "aggiunte": [-5, -10],
+                "obiettivo": 2.0, "scadenza": 10, "tetto": 70},
+    "caduta":  {"nome": "CADUTA", "quota": 1.0, "aggiunte": [-10, -20, -30],
+                "obiettivo": 5.0, "scadenza": 120, "tetto": None},
+    "orso":    {"nome": "ORSO", "quota": 1.5, "aggiunte": [-10, -20, -30],
+                "obiettivo": 5.0, "scadenza": 120, "tetto": 70},
+}
 
 # Registro del segnale (v3.4)
 LAB_HORIZONS = (5, 10, 20)     # giorni di borsa a cui misurare gli esiti
@@ -255,6 +280,77 @@ def fetch_spy_ma200():
     return None, None
 
 
+def phase_from_rows(data):
+    """SMA on dated, distinct SPY sessions; data timestamp travels with phase."""
+    from math import isfinite
+    by_date = {}
+    for row in data if isinstance(data, list) else []:
+        try:
+            day = datetime.strptime(str(row.get("date", "")), "%Y-%m-%d").date()
+            value = float(row.get("adjusted_close") or row.get("close"))
+            if isfinite(value) and value > 0:
+                by_date[day.isoformat()] = value
+        except (TypeError, ValueError):
+            continue
+    days = sorted(by_date)
+    closes = [by_date[day] for day in days]
+    n = FASE_PENDENZA
+    if len(closes) < 200 + n:
+        return None
+    ma_now = sum(closes[-200:]) / 200.0
+    ma_old = sum(closes[-200-n:-n]) / 200.0
+    below, falling = closes[-1] < ma_now, ma_now < ma_old
+    key = "orso" if below and falling else "caduta" if below else "ripresa" if falling else "toro"
+    return {"key": key, "asof": days[-1], "session_count": len(closes),
+            "pct_media": round((closes[-1]/ma_now-1)*100, 1),
+            "pendenza": round((ma_now/ma_old-1)*100, 2)}
+
+
+def fetch_spy_fase():
+    """Metodo v2.0: fase del mercato da SPY (1 chiamata API).
+    Media semplice a 200 sedute oggi e FASE_PENDENZA sedute fa."""
+    try:
+        frm = (datetime.now().date() - timedelta(days=400)).isoformat()
+        r = requests.get(f"{BASE}/eod/SPY.US",
+                         params={"api_token": API_KEY, "fmt": "json",
+                                 "from": frm},
+                         timeout=TIMEOUT)
+        r.raise_for_status()
+        data = r.json()
+        return phase_from_rows(data)
+    except Exception as e:
+        log(f"        (fase del mercato non calcolabile: {str(e)[:80]})")
+    return None
+
+
+def tetto_caduta(dd):
+    """In CADUTA si investe a scaglioni secondo quanto e' sceso l'S&P 500."""
+    if dd is None or dd > -10:
+        return 15
+    if dd > -20:
+        return 30
+    if dd > -30:
+        return 50
+    return 70
+
+
+def piano_fase(fase, regime):
+    if not fase:
+        return None
+    p = dict(REGOLE_FASE[fase["key"]])
+    p.update(fase)
+    if p["tetto"] is None:
+        p["tetto"] = tetto_caduta(regime["pct"] if regime else None)
+    p["conto"] = CONTO_EUR
+    p["plan_status"] = "research_candidate"
+    p["account_live"] = False
+    p["quota_eur"] = round(CONTO_EUR * p["quota"] / 100.0)
+    p["max_titolo_eur"] = p["quota_eur"] * (1 + len(p["aggiunte"]))
+    p["tetto_eur"] = round(CONTO_EUR * p["tetto"] / 100.0)
+    p["filtro_dal_max"] = FILTRO_DAL_MAX
+    return p
+
+
 def compute_breadth_us(us_tickers):
     """Paracadute per la spia Ampiezza: se il bulk non fornisce le medie,
     scarica lo storico dei titoli USA (1 chiamata per titolo, in parallelo)
@@ -429,7 +525,7 @@ def scan():
 
     start = datetime.now()
     log("=" * 70)
-    log("STOCK MONITOR v3.4 - SCANSIONE BULK")
+    log("STOCK MONITOR v4.0 - SCANSIONE BULK")
     log("=" * 70)
     log(f"Avvio: {start:%Y-%m-%d %H:%M:%S}   Soglia alert: {ALERT_THRESHOLD}%")
 
@@ -525,6 +621,11 @@ def scan():
                 continue
             alerts.append(r)
 
+    # Eligibility must use the official alert list AFTER the split filter.
+    official_alerts = {(a["ticker"], a["curr_date"]) for a in alerts}
+    for row in results:
+        row["official_alert"] = (row["ticker"], row["curr_date"]) in official_alerts
+
     # ---- CSV: formato identico al v2.4 ----
     REPORTS.mkdir(parents=True, exist_ok=True)
     csv_name = f"alert_report_{trade_date}.csv"
@@ -571,6 +672,8 @@ def scan():
             spy_trend = {"on": sc <= sm,
                          "pct": round((sc / sm - 1.0) * 100.0, 1)}
 
+    fase = piano_fase(fetch_spy_fase(), regime)
+
     spie = {
         "tendenza": ({"on": spy_trend["on"], "pct": spy_trend["pct"]}
                      if spy_trend else None),
@@ -597,6 +700,7 @@ def scan():
         "alerts_count": len(alerts),
         "regime": regime,
         "spie": spie,
+        "fase": fase,
         "lab": lab,
         "errors": errors,
         "missing": sorted(missing),
@@ -634,6 +738,13 @@ def scan():
             f"(S&P 500 a {regime['pct']:+.1f}% dal massimo 52 settimane)")
     else:
         log("\nSEMAFORO: non disponibile (SPY non trovato nei dati USA)")
+    if fase:
+        log(f"FASE: {fase['nome']}  (SPY {fase['pct_media']:+.1f}% dalla media 200,"
+            f" pendenza 20 sedute {fase['pendenza']:+.2f}%)")
+        log(f"  Piano: quota {fase['quota']}% = {fase['quota_eur']} EUR,"
+            f" aggiunte {fase['aggiunte']}, obiettivo +{fase['obiettivo']}%,"
+            f" scadenza {fase['scadenza']} sedute, tetto {fase['tetto']}%"
+            f" = {fase['tetto_eur']} EUR")
     log("SPIE DELL'ORSO:")
     if spie["tendenza"]:
         st = spie["tendenza"]
