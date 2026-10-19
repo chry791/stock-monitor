@@ -210,6 +210,8 @@
     <div class="stamp" id="stamp">caricamento…</div>
   </header>
 
+  <p class="note" id="dataStatus" aria-live="polite"></p>
+
   <section class="semaforo" id="semaforo" hidden>
     <span class="dot" id="semDot"></span>
     <div class="semtxt"><b id="semTitle"></b><span id="semSub"></span></div>
@@ -228,9 +230,9 @@
     <h2 id="liveTitle">🌙 Anteprima live</h2>
     <p class="livesub" id="liveSub"></p>
     <div id="liveRows"></div>
-    <p class="livenote">Prezzi con 15 min di ritardo · "dal max" stimato ·
-      ordini su gettex fino alle 22:00 · questa lista NON entra nel registro:
-      il report ufficiale resta quello delle chiusure, qui sotto.</p>
+    <p class="livenote">Prezzi ritardati di circa 15–20 minuti · "dal max" stimato ·
+      anteprima informativa: i CANDIDATI del metodo e il registro dipendono
+      dalla scansione ufficiale delle chiusure, qui sotto.</p>
   </section>
 
   <section class="hero" id="hero" hidden>
@@ -285,6 +287,20 @@
 (async function(){
   const $=id=>document.getElementById(id);
   const fmt=n=>n.toLocaleString('it-IT',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const localDate=(ms,tz)=>new Intl.DateTimeFormat('en-CA',
+    {timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ms));
+  const quoteZones={US:'America/New_York',LSE:'Europe/London',PA:'Europe/Paris',
+    XETRA:'Europe/Berlin',MC:'Europe/Madrid',AS:'Europe/Amsterdam',SW:'Europe/Zurich'};
+  const validLiveRow=(r,now)=>{
+    const tz=quoteZones[String(r.ticker||'').split('.').pop()];
+    const ms=new Date(r.quote_time).getTime();
+    return !!tz && Number.isFinite(ms) && Number.isFinite(r.timestamp)
+      && Math.abs(ms-r.timestamp*1000)<1000 && now-ms>=-300000 && now-ms<=90*60000
+      && r.quote_date===localDate(ms,tz) && r.quote_date===localDate(now,tz)
+      && Number.isFinite(r.price) && r.price>0 && Number.isFinite(r.prev_close)
+      && r.prev_close>0 && Number.isFinite(r.pct);
+  };
   let DATA=null, HIST=[], selDay=null;
 
   try{
@@ -301,6 +317,13 @@
   $('genAt').textContent='ultimo aggiornamento: '+DATA.generated_at.replace('T',' ');
   $('csv').href=DATA.csv;
   ['hero','chips','controls','histTitle'].forEach(id=>$(id).hidden=false);
+  const datedRows=DATA.results.filter(r=>r.curr_date===DATA.trade_date).length;
+  const phaseAligned=DATA.fase && DATA.fase.asof===DATA.trade_date;
+  $('dataStatus').textContent='Report ufficiale: chiusure del '+DATA.trade_date+'. '
+    +datedRows+'/'+DATA.results.length+' quotazioni riferite a questa data. '
+    +(phaseAligned?'Data della fase allineata.':'In attesa di una fase con la stessa data: nessun CANDIDATO.')
+    +((DATA.errors||[]).length?' Mercati non scaricati: '+DATA.errors.join(', ')+'.':'');
+  if(!DATA.results.length) $('dataStatus').textContent='Dati ufficiali non disponibili: nessun candidato verificabile.';
 
   if(DATA.regime){
     const CFG={
@@ -394,35 +417,48 @@
     $('lab').hidden=false;
   }
 
-  // ---------- anteprima serale (v3.5): visibile solo se fresca ----------
+  // Anteprima: la data del run NON sostituisce quella di ciascuna quotazione.
   try{
     const L=await (await fetch('live.json?'+Date.now())).json();
-    const age=Date.now()-new Date(L.generated_at).getTime();
-    if(age>=0 && age<6*3600*1000){                 // entro 6 ore dalla scansione
+    const now=Date.now(), age=now-new Date(L.generated_at).getTime();
+    if(age>=0 && age<6*3600*1000){
       const hh=new Date(L.generated_at).toLocaleTimeString('it-IT',
-        {hour:'2-digit',minute:'2-digit'});
+        {timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
       const EU=(L.market==='Europa');
-      $('liveTitle').textContent=EU
-        ?'🌇 Ultima ora d\u2019Europa — anteprima live'
-        :'🌙 Stasera a Wall Street — anteprima live';
-      $('liveSub').textContent=(EU
-        ?'Borse europee in chiusura (17:30) — variazioni di OGGI '
-        :'Mercato USA aperto adesso — variazioni di OGGI ')
-        +'rispetto a ieri (aggiornata alle '+hh+', '+L.analyzed+' titoli)';
-      if(L.results && L.results.length){
-        $('liveRows').innerHTML=L.results.map(r=>{
+      $('liveTitle').textContent=EU?'🌇 Anteprima Europa':'🌙 Anteprima USA';
+      const verified=L.schema_version===2 && L.freshness_checked===true;
+      const raw=Array.isArray(L.results)?L.results:[];
+      const rows=verified && age<=90*60000?raw.filter(r=>validLiveRow(r,now)):[];
+      const Q=L.quality||{}, rejected=Object.values(Q.rejected||{}).reduce((a,b)=>a+b,0);
+      $('liveSub').textContent='Scansione delle '+hh+' (Madrid). '
+        +(verified?L.analyzed+'/'+(Q.requested??'?')+' quotazioni utilizzabili al momento del controllo. '
+          +rejected+' risposte escluse. '+(L.status==='partial'?'Copertura parziale.':'')
+          :'Questa anteprima non contiene date verificabili per i singoli prezzi.');
+      if(!verified){
+        $('liveRows').innerHTML='<div class="livezero">In attesa della prima Anteprima serale con il codice aggiornato. I vecchi segnali sono nascosti.</div>';
+      }else if(age>90*60000){
+        $('liveRows').innerHTML='<div class="livezero">Anteprima scaduta: serve una nuova scansione per mostrare quotazioni recenti.</div>';
+      }else if(rows.length){
+        $('liveRows').innerHTML=rows.map(r=>{
           const dm=r.dist_max;
           const c=dm==null?'':(dm<=-25?' deep':(dm<=-10?' mid':''));
+          const time=new Date(r.quote_time).toLocaleTimeString('it-IT',
+            {timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
           return '<div class="lrow">'
-            +'<span class="t">'+r.ticker.split('.')[0]+'</span>'
-            +'<span class="n" title="'+r.name+'">'+r.name+'</span>'
-            +'<span class="dm'+c+'">'+(dm==null?'—':dm.toFixed(1)+'%')+'</span>'
+            +'<span class="t">'+esc(r.ticker.split('.')[0])+'</span>'
+            +'<span class="n" title="'+esc(r.name)+'">'+esc(r.name)+' · '+time+' Madrid</span>'
+            +'<span class="dm'+c+'">'+(!Number.isFinite(dm)?'—':dm.toFixed(1)+'%')+'</span>'
             +'<span class="p">'+r.pct.toFixed(2)+'%</span>'
             +'</div>';
         }).join('');
+      }else if(L.status==='unavailable' || !L.analyzed){
+        $('liveRows').innerHTML='<div class="livezero">Dati live non disponibili o non aggiornati. Non significa assenza di ribassi.</div>';
+      }else if(raw.length){
+        $('liveRows').innerHTML='<div class="livezero">I segnali ricevuti non hanno più quotazioni recenti e verificabili. Sono stati nascosti.</div>';
       }else{
-        $('liveRows').innerHTML='<div class="livezero">Nessun titolo USA sotto '
-          +L.threshold.toFixed(1)+'% in questo momento ✓</div>';
+        $('liveRows').innerHTML='<div class="livezero">Nessun titolo '+(EU?'europeo':'USA')+' sotto '
+          +Number(L.threshold).toFixed(1)+'% tra le quotazioni verificate'
+          +(L.status==='partial'?' (copertura parziale).':'.')+'</div>';
       }
       $('liveP').hidden=false;
     }
@@ -474,9 +510,10 @@
     // hero + chips (solo sul giorno corrente della scansione selezionata)
     const src=currentRows().slice().sort((a,b)=>a.pct-b.pct);
     // "peggiore del giorno": solo quotazioni di oggi e alert ufficiali (niente prezzi vecchi, niente frazionamenti)
-    const valid=r=>r.historic||((!r.curr_date||r.curr_date===DATA.trade_date)&&(r.pct>DATA.threshold||r.official_alert===true));
-    const worst=src.find(valid)||src[0];
-    const alerts=src.filter(r=>r.pct<=DATA.threshold&&(r.historic||r.official_alert===true));
+    const valid=r=>r.historic||(r.curr_date===DATA.trade_date&&(r.pct>DATA.threshold||r.official_alert===true));
+    const worst=src.find(valid);
+    const alerts=src.filter(r=>r.pct<=DATA.threshold&&(r.historic||(r.curr_date===DATA.trade_date&&r.official_alert===true)));
+    $('hero').hidden=!worst;
     if(worst){
       $('hero').classList.toggle('calm',worst.pct>DATA.threshold);
       $('heroPct').textContent=worst.pct.toFixed(2)+'%';
