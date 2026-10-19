@@ -177,6 +177,8 @@
           text-align:right}
   .row .dm.mid{color:var(--amber)}
   .row .dm.deep{color:var(--loss)}
+  .row.stale{opacity:.5}
+  .row.stale .t small{color:var(--amber)}
   .empty{padding:34px 20px;text-align:center;color:var(--muted);
          font-family:var(--mono);font-size:13px}
 
@@ -349,7 +351,7 @@
     $('faseSub').textContent=TXT[1]+' Dati fase: '+(F.asof||'data non disponibile')+'. Importi indicativi: cassa e impegni del conto non sono collegati.';
     const cells=[
       ['Filtro dal massimo', '≤ '+F.filtro_dal_max+'%'],
-      ['Quota indicativa', F.quota+'% = '+eur(F.quota_eur)],
+      ['Quota piena indicativa', F.quota+'% = '+eur(F.quota_eur)],
       ['Aggiunte (dal 1° prezzo)', F.aggiunte.map(a=>a+'%').join(' / ')],
       ['Max per titolo', eur(F.max_titolo_eur)],
       ['Vendi a', '+'+F.obiettivo+'% sul medio'],
@@ -455,12 +457,13 @@
       box.innerHTML='<div class="empty">Nessun titolo sotto la soglia '+thr.toFixed(1)+'% '+(past?'in questo giorno':'oggi')+' ✓</div>';
     }
     for(const r of rows){
-      const d=document.createElement('div');d.className='row';
+      const stale=!past&&!r.historic&&r.curr_date&&r.curr_date!==DATA.trade_date;   // quotazione di un giorno precedente
+      const d=document.createElement('div');d.className='row'+(stale?' stale':'');
       const dm=(r.dist_max==null||r.historic)?null:r.dist_max;
       const dmCls=dm==null?'':(dm<=-25?' deep':(dm<=-10?' mid':''));
       d.innerHTML='<div class="bar" style="transform:scaleX('+(Math.abs(r.pct)/maxAbs)+')"></div>'
-        +'<span class="t">'+r.ticker.split('.')[0]+'<small>'+r.exchange+'</small>'
-        +(!past&&r.official_alert===true&&DATA.fase&&DATA.fase.asof===DATA.trade_date&&['toro','ripresa','caduta','orso'].includes(DATA.fase.key)&&dm!=null&&dm<=DATA.fase.filtro_dal_max&&r.pct<=DATA.threshold?'<span class="ok">CANDIDATO</span>':'')+'</span>'
+        +'<span class="t">'+r.ticker.split('.')[0]+'<small>'+r.exchange+(stale?' · '+r.curr_date.slice(8,10)+'/'+r.curr_date.slice(5,7):'')+'</small>'
+        +(!past&&r.curr_date===DATA.trade_date&&r.official_alert===true&&DATA.fase&&DATA.fase.asof===DATA.trade_date&&['toro','ripresa','caduta','orso'].includes(DATA.fase.key)&&dm!=null&&dm<=DATA.fase.filtro_dal_max&&r.pct<=DATA.threshold?'<span class="ok">CANDIDATO</span>':'')+'</span>'
         +'<span class="n" title="'+r.name+'">'+r.name+'</span>'
         +'<span class="px">'+(r.historic?'—':fmt(r.curr_close)+' <small>'+r.currency+'</small>')+'</span>'
         +'<span class="dm'+dmCls+'">'+(dm==null?'—':dm.toFixed(1)+'%')+'</span>'
@@ -470,8 +473,10 @@
 
     // hero + chips (solo sul giorno corrente della scansione selezionata)
     const src=currentRows().slice().sort((a,b)=>a.pct-b.pct);
-    const worst=src[0];
-    const alerts=src.filter(r=>r.pct<=DATA.threshold);
+    // "peggiore del giorno": solo quotazioni di oggi e alert ufficiali (niente prezzi vecchi, niente frazionamenti)
+    const valid=r=>r.historic||((!r.curr_date||r.curr_date===DATA.trade_date)&&(r.pct>DATA.threshold||r.official_alert===true));
+    const worst=src.find(valid)||src[0];
+    const alerts=src.filter(r=>r.pct<=DATA.threshold&&(r.historic||r.official_alert===true));
     if(worst){
       $('hero').classList.toggle('calm',worst.pct>DATA.threshold);
       $('heroPct').textContent=worst.pct.toFixed(2)+'%';
