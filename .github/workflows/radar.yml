@@ -1,0 +1,48 @@
+name: Radar nuovo
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '40 23 * * 1-5'
+      timezone: Europe/Madrid
+    - cron: '10 8 * * 2-6'
+      timezone: Europe/Madrid
+
+permissions:
+  contents: write
+
+concurrency:
+  group: stock-monitor-data
+  cancel-in-progress: false
+
+jobs:
+  radar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements-radar.txt
+      - name: Dipendenze Radar
+        run: pip install -r requirements-radar.txt
+      - name: Scansione indipendente Radar
+        env:
+          EOD_API_KEY: ${{ secrets.EOD_API_KEY }}
+        run: python market_monitor.py
+      - name: Salva solo i risultati Radar
+        run: |
+          git config user.name "stock-monitor-bot"
+          git config user.email "actions@github.com"
+          git add -- docs/market.json docs/market_history.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Radar nuovo $(date -u '+%F %H:%M')"
+          git pull --rebase origin main
+          git push
