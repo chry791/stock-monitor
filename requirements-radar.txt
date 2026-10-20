@@ -1,0 +1,4 @@
+pandas==3.0.6
+numpy==2.5.4
+exchange-calendars==4.13.2
+requests>=2.32.4,<3
