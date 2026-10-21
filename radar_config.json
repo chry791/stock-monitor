@@ -1,5 +1,5 @@
 {
-  "version": "5.1.0-snapshot",
+  "version": "5.1.1-news",
   "drop_pct": -5.0,
   "candidate_distance_pct": -10.0,
   "min_coverage_pct": 80.0,
@@ -19,7 +19,12 @@
     "bls.gov",
     "ec.europa.eu",
     "businesswire.com",
-    "globenewswire.com"
+    "globenewswire.com",
+    "cnbc.com",
+    "bloomberg.com",
+    "ft.com",
+    "wsj.com",
+    "marketwatch.com"
   ],
   "benchmarks": {
     "SPY.US": {
@@ -102,5 +107,8 @@
       "exit_margin": 0.03
     }
   },
-  "snapshot_max_age_minutes": 35
+  "snapshot_max_age_minutes": 35,
+  "news_page_size": 100,
+  "news_max_pages": 3,
+  "news_lookback_days": 3
 }

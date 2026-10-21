@@ -8,6 +8,7 @@ Requires pandas, numpy, exchange-calendars. Network uses Python stdlib.
 import argparse
 import csv
 import hashlib
+import html
 import io
 import json
 import math
@@ -377,19 +378,165 @@ def public_macro(now):
     return out
 
 
-def safe_news(rows, allowed, now, ticker=None):
-    out=[]
-    for r in rows if isinstance(rows,list) else []:
-        try:
-            url=str(r.get("link", "")); p=urllib.parse.urlparse(url); host=(p.hostname or "").lower()
-            when=datetime.fromisoformat(str(r.get("date","")).replace("Z","+00:00"))
-            if when.tzinfo is None: continue
-            if p.scheme != "https" or p.username or not any(host==d or host.endswith("."+d) for d in allowed): continue
-            if not 0 <= (now-when).total_seconds() <= 7*86400: continue
-            out.append({"title":str(r.get("title", ""))[:240],"url":url,"source":host,"date":when.isoformat(),"ticker":ticker})
-        except (TypeError,ValueError):
+# Source labels describe the linked website, not an independent fact check.
+NEWS_SOURCE_TYPES = {
+    "reuters.com": ("Reuters", "editorial"),
+    "apnews.com": ("Associated Press", "editorial"),
+    "cnbc.com": ("CNBC", "editorial"),
+    "bloomberg.com": ("Bloomberg", "editorial"),
+    "ft.com": ("Financial Times", "editorial"),
+    "wsj.com": ("The Wall Street Journal", "editorial"),
+    "marketwatch.com": ("MarketWatch", "editorial"),
+    "sec.gov": ("SEC", "institution"),
+    "federalreserve.gov": ("Federal Reserve", "institution"),
+    "ecb.europa.eu": ("Banca centrale europea", "institution"),
+    "bls.gov": ("Bureau of Labor Statistics", "institution"),
+    "ec.europa.eu": ("Commissione europea", "institution"),
+    "businesswire.com": ("Business Wire", "press_release"),
+    "globenewswire.com": ("GlobeNewswire", "press_release"),
+}
+
+
+def news_settings(config):
+    # Bound the work and include every possible retry in the credit estimate.
+    return {
+        "page_size": max(1, min(1000, int(config.get("news_page_size", 100)))),
+        "max_pages": max(1, min(3, int(config.get("news_max_pages", 3)))),
+        "days": max(1, min(7, int(config.get("news_lookback_days", 3)))),
+        "max_tickers": max(0, min(20, int(config.get("news_max_tickers", 20)))),
+    }
+
+
+def filter_news(rows, allowed, now, ticker=None, max_age_days=7):
+    """Reject untrusted URLs and invalid dates; keep headlines and metadata only."""
+    out = []
+    rejected = {}
+    blocked_domains = {}
+    allowed = sorted({str(d).lower().strip() for d in allowed if d}, key=len, reverse=True)
+
+    def reject(reason, host=None):
+        rejected[reason] = rejected.get(reason, 0) + 1
+        if host:
+            blocked_domains[host] = blocked_domains.get(host, 0) + 1
+
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            reject("invalid_record")
             continue
-    return out
+        url = row.get("link")
+        try:
+            if not isinstance(url, str) or any(ord(c) <= 32 for c in url) or "\\" in url:
+                raise ValueError("URL")
+            p = urllib.parse.urlsplit(url)
+            host = (p.hostname or "").lower()
+            if p.scheme != "https" or not host or p.username is not None or p.password is not None or p.port not in (None, 443):
+                raise ValueError("URL")
+        except (TypeError, ValueError):
+            reject("invalid_url")
+            continue
+        domain = next((d for d in allowed if host == d or host.endswith("." + d)), None)
+        if not domain:
+            reject("source_not_allowed", host)
+            continue
+        try:
+            when = datetime.fromisoformat(str(row.get("date", "")).replace("Z", "+00:00"))
+            if when.tzinfo is None:
+                raise ValueError("timezone")
+            age = (now - when).total_seconds()
+        except (TypeError, ValueError, OverflowError):
+            reject("invalid_date")
+            continue
+        if age < 0:
+            reject("future_date")
+            continue
+        if age > max_age_days * 86400:
+            reject("outside_window")
+            continue
+        title = row.get("title")
+        if not isinstance(title, str) or not title.strip():
+            reject("missing_title")
+            continue
+        # HTML entities occur in EODHD headlines; the dashboard still escapes all text.
+        title = " ".join(html.unescape(title).split())[:300]
+        symbols = row.get("symbols", [])
+        symbols = sorted({s.upper() for s in symbols if isinstance(s, str) and 1 <= len(s) <= 32}) if isinstance(symbols, list) else []
+        query = urllib.parse.urlencode([(k, v) for k, v in urllib.parse.parse_qsl(p.query, keep_blank_values=True)
+                                       if not k.lower().startswith("utm_") and k.lower() not in ("guccounter", "guce_referrer", "guce_referrer_sig")])
+        url = urllib.parse.urlunsplit(("https", host, p.path or "/", query, ""))
+        publisher, kind = NEWS_SOURCE_TYPES.get(domain, (host, "allowed_source"))
+        out.append({"title": title, "url": url, "source": host, "publisher": publisher,
+                    "source_type": kind, "date": when.astimezone(timezone.utc).isoformat(),
+                    "symbols": symbols, "ticker": ticker if ticker in symbols else None})
+    return out, rejected, blocked_domains
+
+
+def safe_news(rows, allowed, now, ticker=None):
+    # Compatibility with older offline tools.
+    return filter_news(rows, allowed, now, ticker)[0]
+
+
+def collect_news(client, config, alerts, now):
+    settings = news_settings(config)
+    all_targets = list(dict.fromkeys(alerts))
+    targets = all_targets[:settings["max_tickers"]]
+    known_alerts = set(all_targets)
+    by_url = {}
+    diagnostics = {
+        "started_at": now.isoformat(), "lookback_days": settings["days"],
+        "requested_tickers": targets, "alerts_total": len(all_targets),
+        "alerts_not_queried": all_targets[len(targets):],
+        "requests": 0, "successful_requests": 0, "received": 0,
+        "eligible_records": 0, "rejected": {}, "excluded_domains": {},
+        "errors": [], "limited_queries": [],
+        "allowed_domains": config["news_allowed_domains"],
+    }
+    for ticker in [None] + targets:
+        for page in range(settings["max_pages"]):
+            params = {"limit": settings["page_size"], "offset": page * settings["page_size"],
+                      "from": (now - timedelta(days=settings["days"])).date().isoformat()}
+            if ticker:
+                params["s"] = ticker
+            raw = client.get("news", params, cost=5)
+            diagnostics["requests"] += 1
+            if not isinstance(raw, list):
+                # Do not publish arbitrary upstream error strings, URLs or credentials.
+                code = raw.get("error") if isinstance(raw, dict) else None
+                code = code if code in {"http_401", "http_402", "http_403", "http_429", "http_500", "http_502", "http_503", "http_504"} else "invalid_response"
+                diagnostics["errors"].append({"query": ticker or "market", "code": code})
+                break
+            diagnostics["successful_requests"] += 1
+            diagnostics["received"] += len(raw)
+            accepted, rejected, domains = filter_news(raw, config["news_allowed_domains"], now, ticker, settings["days"])
+            diagnostics["eligible_records"] += len(accepted)
+            for name, counts in (("rejected", rejected), ("excluded_domains", domains)):
+                for key, value in counts.items():
+                    diagnostics[name][key] = diagnostics[name].get(key, 0) + value
+            for item in accepted:
+                # Exact provider symbol tags only: never infer a cause or company from text.
+                item["tickers"] = sorted(known_alerts.intersection(item.pop("symbols")))
+                item["ticker"] = item["tickers"][0] if len(item["tickers"]) == 1 else None
+                old = by_url.get(item["url"])
+                if old:
+                    tags = sorted(set(old["tickers"]) | set(item["tickers"]))
+                    item = old if old["date"] >= item["date"] else item
+                    item["tickers"] = tags
+                    item["ticker"] = tags[0] if len(tags) == 1 else None
+                by_url[item["url"]] = item
+            if len(raw) < settings["page_size"]:
+                break
+            if page + 1 == settings["max_pages"]:
+                diagnostics["limited_queries"].append(ticker or "market")
+    news = sorted(by_url.values(), key=lambda n: (n["date"], n["url"]), reverse=True)
+    diagnostics["admitted"] = len(news)
+    diagnostics["duplicates_removed"] = diagnostics["eligible_records"] - len(news)
+    diagnostics["finished_at"] = datetime.now(timezone.utc).isoformat()
+    if diagnostics["errors"]:
+        status = "partial" if diagnostics["successful_requests"] else "unavailable"
+    elif news:
+        status = "ok"
+    else:
+        status = "filtered" if diagnostics["received"] else "empty"
+    return {"news": news, "news_status": status, "news_diagnostics": diagnostics}
 
 
 # Snapshot extension: delayed quotes, isolated from official daily history.
@@ -674,7 +821,8 @@ def main():
         usage=client.get("user",cost=0)
         if isinstance(usage,dict) and usage.get("error") in ("http_401","http_402","http_403"):
             raise SystemExit("Accesso EODHD non disponibile: controlla Secret, abbonamento e quota. Nessun dato nuovo pubblicato.")
-        estimated=6*len(all_meta)+10*(config["news_max_tickers"]+1)
+        news_limits=news_settings(config)
+        estimated=6*len(all_meta)+10*news_limits["max_pages"]*(news_limits["max_tickers"]+1)
         if estimated>config["credit_budget_per_run"]: raise SystemExit("Budget configurato insufficiente per questa watchlist")
         if isinstance(usage,dict) and finite(usage.get("dailyRateLimit")):
             used=float(usage.get("apiRequests",0)) if usage.get("apiRequestsDate")==now.date().isoformat() else 0
@@ -707,16 +855,11 @@ def main():
         report["snapshot"]=build_quote_report(watch,histories,config,quote_end,live_context,report,
                                              quotes,quote_errors,quote_start.isoformat(),quote_end.isoformat())
         report["snapshot"]["request_errors"]=len(quote_errors)
-        targets=[s["ticker"] for s in report["snapshot"]["stocks"] if s["alert"]][:config["news_max_tickers"]]
-        news=[]; errors=0
-        for t in [None]+targets:
-            params={"limit":20,"from":(now-timedelta(days=3)).date().isoformat()}
-            if t: params["s"]=t
-            raw=client.get("news",params,cost=5)
-            errors+=not isinstance(raw,list)
-            news.extend(safe_news(raw,config["news_allowed_domains"],datetime.now(timezone.utc),t))
-        report["news"]=list({(n["url"],n["ticker"]):n for n in news}.values())
-        report["news_status"]="partial" if errors else "ok"
+        targets=[s["ticker"] for s in report["snapshot"]["stocks"] if s["alert"]]
+        report.update(collect_news(client,config,targets,datetime.now(timezone.utc)))
+        nd=report["news_diagnostics"]
+        print(f"Notizie: {nd['received']} risultati ricevuti; {nd['admitted']} notizie uniche ammesse; "
+              f"{len(nd['errors'])} richieste con errore; stato {report['news_status']}", flush=True)
         latest=client.get("user",cost=0)
         report["usage"]={k:latest.get(k) for k in ("apiRequests","apiRequestsDate","dailyRateLimit") if isinstance(latest,dict) and k in latest}
         report["usage"].update(estimated_run_credits=client.credits,run_requests=client.requests)
