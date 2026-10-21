@@ -392,6 +392,263 @@ def safe_news(rows, allowed, now, ticker=None):
     return out
 
 
+# Snapshot extension: delayed quotes, isolated from official daily history.
+def quote_context(now, exchanges):
+    """Latest session that has opened, with actual venue calendar boundaries."""
+    import exchange_calendars as xc
+    out = {}
+    for ex in set(exchanges):
+        try:
+            cal = xc.get_calendar(CALENDARS[ex])
+            sessions = cal.sessions_in_range((now-timedelta(days=850)).date(), now.date())
+            begun = [s for s in sessions if cal.session_open(s).to_pydatetime() <= now]
+            last = begun[-1]
+            opening = cal.session_open(last).to_pydatetime()
+            closing = cal.session_close(last).to_pydatetime()
+            dates = [s.strftime('%Y-%m-%d') for s in begun]
+            out[ex] = {'expected': dates[-1], 'previous': dates[-2], 'sessions': dates,
+                       'calendar': CALENDARS[ex], 'open_at': opening.isoformat(),
+                       'close_at': closing.isoformat(), 'market_open': opening <= now < closing}
+        except Exception as exc:
+            out[ex] = {'expected': None, 'previous': None, 'sessions': [],
+                       'error': type(exc).__name__, 'market_open': None}
+    return out
+
+
+def fetch_quotes(client, meta, workers=6):
+    """Request EVERY symbol, in same-exchange blocks of at most 16.
+
+    Costs are per symbol, not per HTTP request. Do not log URLs/credentials.
+    One unsupported symbol must not prevent the rest of a batch from loading.
+    Failed blocks are isolated once; individual failures are not looped forever.
+    """
+    groups = {}
+    for ticker in meta:
+        groups.setdefault(ticker.rsplit('.', 1)[-1], []).append(ticker)
+    batches = [items[i:i+16] for items in groups.values() for i in range(0, len(items), 16)]
+    quotes, errors = {}, {}
+
+    def request(chunk):
+        params = {'s': ','.join(chunk[1:])} if len(chunk) > 1 else {}
+        result = client.get('real-time/'+urllib.parse.quote(chunk[0], safe='.'), params, cost=len(chunk))
+        if isinstance(result, dict) and result.get('code'):
+            result = [result]
+        if not isinstance(result, list):
+            reason = result.get('error', 'invalid_payload') if isinstance(result, dict) else 'invalid_payload'
+            # A denied/invalid symbol can poison a multi-symbol request.
+            if len(chunk) > 1 and reason in ('http_400', 'http_403', 'http_404', 'invalid_payload'):
+                found, failed = {}, {}
+                for ticker in chunk:
+                    q, e = request([ticker]); found.update(q); failed.update(e)
+                return found, failed
+            return {}, dict.fromkeys(chunk, reason)
+        found, failed = {}, {}
+        for row in result:
+            if not isinstance(row, dict) or row.get('code') not in chunk:
+                continue
+            ticker = row['code']
+            if ticker in found and found[ticker] != row:
+                failed[ticker] = 'conflicting_quotes'
+            found[ticker] = row
+        for ticker in failed:
+            found.pop(ticker, None)
+        for ticker in chunk:
+            if ticker not in found:
+                failed.setdefault(ticker, 'not_returned')
+        return found, failed
+
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for n, future in enumerate(as_completed([pool.submit(request, b) for b in batches]), 1):
+            found, failed = future.result(); quotes.update(found); errors.update(failed)
+            if n % 10 == 0 or n == len(batches):
+                print(f'Fotografia: {n}/{len(batches)} blocchi letti', flush=True)
+    return quotes, errors
+
+
+def check_quote(raw, ticker, ctx, now, max_age_minutes=35):
+    """UTC epoch already includes timezone. Reject pre/post-market and stale data.
+
+    Closed venues may have a last regular-session quote up to 35 minutes before
+    close. It is labelled as a delayed last trade, never an official close.
+    """
+    out = {'quote_status': 'missing', 'quote_reason': 'Quotazione non ricevuta',
+           'quote_time': None, 'quote_age_minutes': None}
+    if not isinstance(raw, dict) or raw.get('code') != ticker:
+        return out
+    if not ctx.get('expected'):
+        return dict(out, quote_status='unknown', quote_reason='Calendario non verificabile')
+    try:
+        ts = raw.get('timestamp')
+        if not finite(ts) or float(ts) <= 0: raise ValueError()
+        when = datetime.fromtimestamp(float(ts), timezone.utc)
+        age = (now-when).total_seconds()/60
+        out.update(quote_time=when.isoformat(), quote_age_minutes=number(age, 1))
+        if age < -2:
+            return dict(out, quote_status='review', quote_reason='Orario futuro incoerente')
+        if not finite(raw.get('close')) or float(raw['close']) <= 0:
+            return dict(out, quote_status='review', quote_reason='Prezzo non valido')
+        out['quote_price'] = number(raw['close'], 4)
+        if not finite(raw.get('previousClose')) or float(raw['previousClose']) <= 0:
+            return dict(out, quote_status='review', quote_reason='Chiusura precedente non disponibile')
+        out['quote_previous_close'] = number(raw['previousClose'], 6)
+        out['quote_pct'] = number((float(raw['close'])/float(raw['previousClose'])-1)*100)
+        opening, closing = (datetime.fromisoformat(ctx[k]) for k in ('open_at','close_at'))
+        if when < opening:
+            return dict(out, quote_status='stale', quote_reason='Quotazione di una seduta precedente')
+        if when > closing + timedelta(minutes=2):
+            return dict(out, quote_status='review', quote_reason='Quotazione fuori seduta: non confrontabile con la chiusura ordinaria')
+        reference = min(now, closing)
+        if (reference-when).total_seconds() > max_age_minutes*60:
+            return dict(out, quote_status='stale', quote_reason='Ultimo scambio troppo vecchio per la fotografia')
+        if abs(out['quote_pct']) > 50:
+            return dict(out, quote_status='review', quote_reason='Movimento oltre il 50%: verificare operazioni societarie/dati')
+        return dict(out, quote_status='ok', quote_reason=None)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return dict(out, quote_status='review', quote_reason='Orario o quotazione non validi')
+
+
+def build_quote_report(watch, histories, config, now, contexts, daily, quotes, errors,
+                       acquisition_started_at, acquisition_finished_at):
+    """Produce a separate provisional view. Never archive this as daily EOD.
+
+    Append/replace exactly one current bar, anchored to the last adjusted close.
+    If quote.previousClose disagrees with the historical raw close, publish the
+    quote but suppress technical extrapolation (splits, distributions, units).
+    """
+    meta = {**watch, **config['benchmarks']}
+    base = {r['ticker']: r for r in daily['stocks']+daily['benchmarks']}
+    working, info = {}, {}
+    max_age = config.get('snapshot_max_age_minutes', 35)
+    for ticker, m in meta.items():
+        ctx = contexts.get(m['exchange'], {})
+        checked = check_quote(quotes.get(ticker), ticker, ctx, now, max_age)
+        checked.update(market_open=ctx.get('market_open'), market_close=ctx.get('close_at'),
+                       technical_reason=None, observation_kind='unavailable', technical_usable=False)
+        if ticker in errors:
+            checked['request_error'] = errors[ticker]
+        info[ticker] = checked
+        rows = histories.get(ticker, [])
+        df = prepare_series(rows, ctx.get('expected') or '', ctx.get('sessions'))
+        # Use a finalized EOD price for a closed exchange if already available.
+        b = base.get(ticker, {})
+        if (ctx.get('market_open') is False and b.get('status') == 'ok'
+                and b.get('asof') == ctx.get('expected')):
+            working[ticker] = rows
+            checked.update(observation_kind='eod_close', technical_usable=True,
+                           observed_at=None, observation_date=b['asof'])
+            continue
+        if checked['quote_status'] != 'ok':
+            working[ticker] = []
+            continue
+        checked.update(observation_kind='delayed_quote', observed_at=checked['quote_time'],
+                       observation_date=ctx['expected'])
+        prior = df[df.index < ctx['expected']] if not df.empty else df
+        if prior.empty or prior.index[-1] != ctx['previous']:
+            working[ticker] = []
+            checked['technical_reason'] = 'Storico precedente non allineato: disponibili solo prezzo e variazione'
+            continue
+        prev = float(quotes[ticker]['previousClose'])
+        if not math.isclose(float(prior.iloc[-1].close), prev, rel_tol=0.002, abs_tol=0.00001):
+            working[ticker] = []
+            checked['technical_reason'] = 'Chiusura precedente discordante: possibili split, dividendi o unità diverse; medie e filtro massimo sospesi'
+            continue
+        raw = quotes[ticker]
+        price = float(raw['close'])
+        factor = float(prior.iloc[-1].adjusted_close)/prev
+        # Invalid session high/low must disable the 252-session maximum filter.
+        hi, lo = raw.get('high'), raw.get('low')
+        valid_hl = (finite(hi) and finite(lo) and float(hi) >= price >= float(lo) > 0)
+        bar = {'date':ctx['expected'], 'close':price, 'adjusted_close':price*factor,
+               'high':float(hi) if valid_hl else None, 'low':float(lo) if valid_hl else None,
+               'volume':float(raw['volume']) if finite(raw.get('volume')) and float(raw['volume']) >= 0 else None}
+        working[ticker] = [r for r in rows if str(r.get('date','')) < ctx['expected']]+[bar]
+        checked['technical_usable'] = True
+    view = build_report(watch, working, config, now, contexts, previous={}, mode='snapshot')
+    for row in view['stocks']+view['benchmarks']:
+        ticker = row['ticker']; q = info[ticker]; row.update(q)
+        if q['observation_kind'] == 'delayed_quote':
+            row.update(status='ok', asof=q['observation_date'], expected=q['observation_date'],
+                       price=q['quote_price'], pct=q['quote_pct'], raw_pct=q['quote_pct'],
+                       currency=CURRENCIES.get(row['exchange'], 'EUR'), price_basis='delayed_previous_close',
+                       reason=q['technical_reason'], rel_volume=None,
+                       alert=q['quote_pct'] <= config['drop_pct'])
+            row['candidate'] = bool(row['alert'] and q['technical_usable'] and finite(row.get('dist_max'))
+                                    and row['dist_max'] <= config['candidate_distance_pct'])
+        elif q['observation_kind'] == 'unavailable':
+            # Keep older known values visible without treating them as current.
+            old = base.get(ticker, {})
+            row.update(status=q['quote_status'], reason=q['quote_reason'], alert=False, candidate=False,
+                       last_known_price=old.get('price'), last_known_date=old.get('asof'),
+                       price=q.get('quote_price'), pct=q.get('quote_pct'), asof=None,
+                       currency=CURRENCIES.get(row['exchange'], 'EUR'))
+    # Recalculate pressure and A/D from quotes even when long history is missing.
+    for region in view['regions']:
+        members = [r for r in view['stocks'] if r['area'] == region['area']]
+        valid = [r for r in members if r['status'] == 'ok' and finite(r.get('pct'))]
+        days = {r.get('asof') for r in valid}
+        expected = {contexts.get(r['exchange'], {}).get('expected') for r in members}
+        aligned = len(expected) == 1 and None not in expected and days == expected
+        day = next(iter(days)) if len(days) == 1 else None
+        n = len(valid); coverage = 100*n/len(members)
+        latest = region['latest']
+        latest.update(date=day, n=n, coverage=number(coverage),
+                      pressure=number(100*sum(r['alert'] for r in valid)/n) if n else None,
+                      advance=sum(r['pct'] > 0 for r in valid), decline=sum(r['pct'] < 0 for r in valid),
+                      unchanged=sum(r['pct'] == 0 for r in valid))
+        region.update(valid=n, coverage=number(coverage), aligned=aligned, asof=day)
+        old_region = next((r for r in daily['regions'] if r['area'] == region['area']), {})
+        region['history'] = [p for p in old_region.get('history', []) if not day or p['date'] < day]
+        if day: region['history'].append(dict(latest, provisional=True))
+        for i in view['indicators']:
+            if i['key'] == region['area']+':pressure':
+                good = aligned and coverage >= config['min_coverage_pct'] and n >= config['min_breadth_names']
+                i.update(value=latest['pressure'], asof=day, quality='ok' if good else 'partial',
+                         level=raw_level(latest['pressure'], i['rule']) if good else 'unknown',
+                         detail=f'Fotografia ritardata; copertura {number(coverage)}% della watchlist.')
+    # VIX level needs a valid quote, not 252 historical bars. The ratio also
+    # requires synchronized observations; do not mix a quote and an EOD close.
+    bm = {r['ticker']: r for r in view['benchmarks']}
+    v, v3 = bm.get('VIX.INDX', {}), bm.get('VIX3M.INDX', {})
+    ratio_ok = v.get('status') == v3.get('status') == 'ok' and v.get('asof') == v3.get('asof')
+    ratio_ok = ratio_ok and v.get('observation_kind') == v3.get('observation_kind') and finite(v3.get('price')) and v3['price'] > 0
+    if ratio_ok and v.get('observation_kind') == 'delayed_quote':
+        ratio_ok = abs((datetime.fromisoformat(v['observed_at'])-datetime.fromisoformat(v3['observed_at'])).total_seconds()) <= 300
+    for i in view['indicators']:
+        if i['key'] in ('vix', 'vix_ratio'):
+            good = v.get('status') == 'ok' if i['key'] == 'vix' else ratio_ok
+            val = v.get('price') if i['key'] == 'vix' else v['price']/v3['price'] if ratio_ok else None
+            i.update(value=number(val), asof=v.get('asof'), quality='ok' if good else 'missing',
+                     level=raw_level(val, i['rule']) if good else 'unknown')
+    # Two scans on one day are NOT two confirmed sessions.
+    for i in view['indicators']:
+        i.update(confirmed=False, sessions=0, provisional=True,
+                 detail=i['detail']+' Lettura provvisoria, non confermata dalla chiusura.')
+    view['changes'] = []
+    view['stocks'].sort(key=lambda r:r['pct'] if r.get('pct') is not None and r['status']=='ok' else 999)
+    q = view['quality']
+    q.update(valid=sum(r['status']=='ok' for r in view['stocks']),
+             issues=[dict(ticker=r['ticker'],status=r['status'],asof=r.get('asof'),expected=r.get('expected'),reason=r.get('reason'))
+                     for r in view['stocks'] if r['status'] != 'ok' or r.get('technical_reason')],
+             benchmark_issues=[dict(ticker=r['ticker'],status=r['status'],asof=r.get('asof'),expected=r.get('expected'),reason=r.get('reason'))
+                     for r in view['benchmarks'] if r['status'] != 'ok' or r.get('technical_reason')])
+    view.update(status='ok' if q['valid']==len(watch) else 'partial' if q['valid'] else 'unavailable',
+                acquisition_started_at=acquisition_started_at, acquisition_finished_at=acquisition_finished_at,
+                requested=len(watch), quote_received=sum(t in quotes for t in watch),
+                delayed_valid=sum(r['observation_kind']=='delayed_quote' for r in view['stocks']),
+                eod_valid=sum(r['observation_kind']=='eod_close' for r in view['stocks']),
+                max_quote_age_minutes=max_age, market_sessions={ex:{k:v for k,v in c.items() if k!='sessions'} for ex,c in contexts.items()},
+                limits=['Fotografia delle quotazioni disponibili, normalmente ritardate di 15–20 minuti; acquisizione non simultanea.',
+                        'Ogni titolo mantiene l’orario del fornitore. Titoli non aggiornati esclusi da alert e termometri.',
+                        'A mercato chiuso si preferisce la chiusura EOD verificata, altrimenti l’ultimo scambio regolare sufficientemente recente.',
+                        'Medie, massimi e candidati in seduta sono provvisori: operazioni societarie possono richiedere rettifiche successive.',
+                        'Una discordanza oltre lo 0,2% tra chiusure precedenti sospende le estrapolazioni tecniche.',
+                        'Macro e notizie mantengono la propria frequenza e data. Nessun segnale garantisce di anticipare una crisi.'])
+    # The UI inherits shared news/macro/usage from the enclosing daily report.
+    for field in ('news','macro','usage','news_status'):
+        view.pop(field, None)
+    return view
+
+
 def main():
     parser=argparse.ArgumentParser()
     parser.add_argument("--history-file",help="Replay locale CSV/CSV.GZ; nessuna API e nessuna quota consumata")
@@ -417,7 +674,7 @@ def main():
         usage=client.get("user",cost=0)
         if isinstance(usage,dict) and usage.get("error") in ("http_401","http_402","http_403"):
             raise SystemExit("Accesso EODHD non disponibile: controlla Secret, abbonamento e quota. Nessun dato nuovo pubblicato.")
-        estimated=2*len(all_meta)+10*(config["news_max_tickers"]+1)
+        estimated=6*len(all_meta)+10*(config["news_max_tickers"]+1)
         if estimated>config["credit_budget_per_run"]: raise SystemExit("Budget configurato insufficiente per questa watchlist")
         if isinstance(usage,dict) and finite(usage.get("dailyRateLimit")):
             used=float(usage.get("apiRequests",0)) if usage.get("apiRequestsDate")==now.date().isoformat() else 0
@@ -432,22 +689,32 @@ def main():
         histories["SPY.US"]=probe if isinstance(probe,list) else []
         with ThreadPoolExecutor(max_workers=config["max_workers"]) as pool:
             futures=[pool.submit(fetch,t) for t in all_meta if t != "SPY.US"]
-            for f in as_completed(futures):
+            for completed, f in enumerate(as_completed(futures), 1):
                 t,rows=f.result()
                 histories[t]=rows if isinstance(rows,list) else []
+                if completed % 100 == 0 or completed == len(futures):
+                    print(f"Storici: {completed+1}/{len(all_meta)} letti", flush=True)
     previous=load_json(args.output,{})
     if previous.get("mode") != ("historical_replay" if args.history_file else "live"): previous={}
     report=build_report(watch,histories,config,now,contexts,previous,mode="historical_replay" if args.history_file else "live")
     if client:
-        report["macro"]=public_macro(now)
-        targets=[s["ticker"] for s in report["stocks"] if s["alert"]][:config["news_max_tickers"]]
+        report["macro"]=public_macro(datetime.now(timezone.utc))
+        print("Acquisizione fotografia ritardata di tutta la watchlist…", flush=True)
+        quote_start=datetime.now(timezone.utc)
+        quotes, quote_errors=fetch_quotes(client,all_meta,config["max_workers"])
+        quote_end=datetime.now(timezone.utc)
+        live_context=quote_context(quote_end,[m["exchange"] for m in all_meta.values()])
+        report["snapshot"]=build_quote_report(watch,histories,config,quote_end,live_context,report,
+                                             quotes,quote_errors,quote_start.isoformat(),quote_end.isoformat())
+        report["snapshot"]["request_errors"]=len(quote_errors)
+        targets=[s["ticker"] for s in report["snapshot"]["stocks"] if s["alert"]][:config["news_max_tickers"]]
         news=[]; errors=0
         for t in [None]+targets:
             params={"limit":20,"from":(now-timedelta(days=3)).date().isoformat()}
             if t: params["s"]=t
             raw=client.get("news",params,cost=5)
             errors+=not isinstance(raw,list)
-            news.extend(safe_news(raw,config["news_allowed_domains"],now,t))
+            news.extend(safe_news(raw,config["news_allowed_domains"],datetime.now(timezone.utc),t))
         report["news"]=list({(n["url"],n["ticker"]):n for n in news}.values())
         report["news_status"]="partial" if errors else "ok"
         latest=client.get("user",cost=0)
@@ -455,6 +722,13 @@ def main():
         report["usage"].update(estimated_run_credits=client.credits,run_requests=client.requests)
     if not any(s["status"]=="ok" for s in report["stocks"]) and not args.history_file:
         report["status"]="unavailable"
+    report["completed_at"]=datetime.now(timezone.utc).isoformat() if client else now.isoformat()
+    if client:
+        report["run_id"]=os.environ.get("GITHUB_RUN_ID")
+        live=report["snapshot"]
+        print(f"Fotografia: {live['quality']['valid']}/{len(watch)} utilizzabili; "
+              f"{live['delayed_valid']} quotazioni ritardate, {live['eod_valid']} chiusure verificate; "
+              f"{sum(s['alert'] for s in live['stocks'])} alert", flush=True)
     write_json(args.output,report)
     if not args.history_file:
         archive=Path(args.output).with_name("market_history.json")

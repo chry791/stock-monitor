@@ -1,5 +1,5 @@
 {
-  "version": "5.0.0-pilot",
+  "version": "5.1.0-snapshot",
   "drop_pct": -5.0,
   "candidate_distance_pct": -10.0,
   "min_coverage_pct": 80.0,
@@ -7,26 +7,100 @@
   "lookback_calendar_days": 800,
   "request_interval_seconds": 0.25,
   "max_workers": 6,
-  "credit_budget_per_run": 2500,
+  "credit_budget_per_run": 6000,
   "eod_delay_minutes": 30,
   "news_max_tickers": 20,
-  "news_allowed_domains": ["reuters.com", "apnews.com", "sec.gov", "federalreserve.gov", "ecb.europa.eu", "bls.gov", "ec.europa.eu", "businesswire.com", "globenewswire.com"],
+  "news_allowed_domains": [
+    "reuters.com",
+    "apnews.com",
+    "sec.gov",
+    "federalreserve.gov",
+    "ecb.europa.eu",
+    "bls.gov",
+    "ec.europa.eu",
+    "businesswire.com",
+    "globenewswire.com"
+  ],
   "benchmarks": {
-    "SPY.US": {"name": "S&P 500 · SPY", "exchange": "US", "area": "USA"},
-    "QQQ.US": {"name": "Nasdaq 100 · QQQ", "exchange": "US", "area": "USA"},
-    "RSP.US": {"name": "S&P 500 a pesi uguali · RSP", "exchange": "US", "area": "USA"},
-    "SXXP.INDX": {"name": "STOXX Europe 600", "exchange": "XETRA", "area": "Europa"},
-    "FTSE.INDX": {"name": "FTSE 100", "exchange": "LSE", "area": "Regno Unito"},
-    "VIX.INDX": {"name": "VIX · 30 giorni", "exchange": "US", "area": "Volatilità"},
-    "VIX3M.INDX": {"name": "VIX3M · 3 mesi", "exchange": "US", "area": "Volatilità"}
+    "SPY.US": {
+      "name": "S&P 500 · SPY",
+      "exchange": "US",
+      "area": "USA"
+    },
+    "QQQ.US": {
+      "name": "Nasdaq 100 · QQQ",
+      "exchange": "US",
+      "area": "USA"
+    },
+    "RSP.US": {
+      "name": "S&P 500 a pesi uguali · RSP",
+      "exchange": "US",
+      "area": "USA"
+    },
+    "SXXP.INDX": {
+      "name": "STOXX Europe 600",
+      "exchange": "XETRA",
+      "area": "Europa"
+    },
+    "FTSE.INDX": {
+      "name": "FTSE 100",
+      "exchange": "LSE",
+      "area": "Regno Unito"
+    },
+    "VIX.INDX": {
+      "name": "VIX · 30 giorni",
+      "exchange": "US",
+      "area": "Volatilità"
+    },
+    "VIX3M.INDX": {
+      "name": "VIX3M · 3 mesi",
+      "exchange": "US",
+      "area": "Volatilità"
+    }
   },
   "thresholds": {
-    "trend": {"direction": "low", "attention": 0, "stress": -5, "exit_margin": 1},
-    "breadth50": {"direction": "low", "attention": 50, "stress": 30, "exit_margin": 3},
-    "breadth200": {"direction": "low", "attention": 50, "stress": 40, "exit_margin": 3},
-    "pressure": {"direction": "high", "attention": 3, "stress": 7, "exit_margin": 0.5},
-    "new_lows": {"direction": "high", "attention": 5, "stress": 10, "exit_margin": 1},
-    "vix": {"direction": "high", "attention": 25, "stress": 35, "exit_margin": 2},
-    "vix_ratio": {"direction": "high", "attention": 1, "stress": 1.1, "exit_margin": 0.03}
-  }
+    "trend": {
+      "direction": "low",
+      "attention": 0,
+      "stress": -5,
+      "exit_margin": 1
+    },
+    "breadth50": {
+      "direction": "low",
+      "attention": 50,
+      "stress": 30,
+      "exit_margin": 3
+    },
+    "breadth200": {
+      "direction": "low",
+      "attention": 50,
+      "stress": 40,
+      "exit_margin": 3
+    },
+    "pressure": {
+      "direction": "high",
+      "attention": 3,
+      "stress": 7,
+      "exit_margin": 0.5
+    },
+    "new_lows": {
+      "direction": "high",
+      "attention": 5,
+      "stress": 10,
+      "exit_margin": 1
+    },
+    "vix": {
+      "direction": "high",
+      "attention": 25,
+      "stress": 35,
+      "exit_margin": 2
+    },
+    "vix_ratio": {
+      "direction": "high",
+      "attention": 1,
+      "stress": 1.1,
+      "exit_margin": 0.03
+    }
+  },
+  "snapshot_max_age_minutes": 35
 }
