@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light"><meta name="description" content="Il tuo osservatorio su titoli, partecipazione e stress di mercato. Dati datati, regole trasparenti, decisioni tue.">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Xzekb+iNJQ/licX0oFdMxe9tTVXhk/e42zXIj62shxI='; style-src 'unsafe-inline'; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data:; font-src 'self'; base-uri 'none'; object-src 'none'; frame-src 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
 <title>Stock Monitor — Radar nuovo in prova</title>
 <style>
 :root{--ink:#182b3c;--muted:#617380;--paper:#f3f5f5;--line:#dfe6e8;--navy:#102d3b;--green:#087969;--mint:#cceee4;--amber:#9b6400;--red:#b83c43;--blue:#315dda;--white:#fff;--radius:18px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:var(--paper)}*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button,a,input,select,summary{outline-offset:4px}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid #4586f3}button{cursor:pointer}a{color:var(--green)}button{border:0}p{line-height:1.65}h1,h2,h3,p{margin-top:0}small{font-size:12px}svg{display:block;width:100%;height:auto}.shell{max-width:1510px;margin:auto;display:grid;grid-template-columns:218px minmax(0,1fr);min-height:100vh}.sidebar{padding:35px 24px;position:sticky;top:0;height:100vh;border-right:1px solid var(--line);background:#fafbfb;display:flex;flex-direction:column}.brand{font-size:21px;line-height:1.13;font-weight:850;letter-spacing:-.8px;color:var(--navy);text-decoration:none;display:flex;gap:10px;align-items:center}.brand-mark{width:29px;height:32px;background:var(--green);clip-path:polygon(0 65%,25% 40%,46% 60%,100% 0,100% 25%,46% 90%,25% 70%,0 95%)}.edition{font-size:10px;letter-spacing:1.8px;color:var(--muted);margin:13px 0 38px}.nav{display:grid;gap:8px}.nav button{text-align:left;background:none;border-radius:10px;padding:12px 14px;color:var(--muted);font-size:14px}.nav button.active{background:#e5efec;color:var(--green);font-weight:750}.nav button span{display:inline-block;width:25px}.side-footer{margin-top:auto;font-size:12px;line-height:1.7;color:var(--muted)}.side-footer a{display:block;margin-top:9px}.main{padding:28px 38px 35px;min-width:0}.topbar{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:25px}.eyebrow{text-transform:uppercase;letter-spacing:1.6px;font-size:10px;font-weight:750;color:var(--muted);margin-bottom:7px}.topbar h1{font-size:24px;letter-spacing:-.7px;margin:0}.actions{display:flex;gap:9px;align-items:center}.btn{background:white;border:1px solid var(--line);padding:10px 14px;border-radius:9px;color:var(--ink);font-size:12px;font-weight:650}.btn.primary{background:var(--green);color:white;border-color:var(--green)}.date{color:var(--muted);font-size:12px;line-height:1.5}.banner{padding:13px 17px;background:#fff3d8;border:1px solid #edd6a6;border-radius:11px;color:#805400;font-size:13px;line-height:1.6;margin-bottom:18px}.banner.neutral{background:#e7edf8;color:#334b77;border-color:#ccdaef}.hero{background:var(--navy);color:white;border-radius:var(--radius);padding:29px 31px;display:grid;grid-template-columns:1.15fr 1fr;gap:24px;position:relative;overflow:hidden}.hero .eyebrow{color:#a2c7c7}.hero h2{font-size:34px;letter-spacing:-1px;margin:12px 0 10px;font-weight:680}.hero p{font-size:13px;color:#c5d8dd;max-width:490px;margin-bottom:16px}.hero .tag{border:1px solid #59848a;background:#244653;color:#e4f8f3}.hero .spark-box{align-self:center}.hero .spark-box svg{height:110px}.hero-caption{display:flex;justify-content:space-between;font-size:10px;color:#b9d2d7}.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:15px;margin:18px 0 28px}.kpi{background:white;border:1px solid var(--line);border-radius:13px;padding:17px 20px}.kpi .label{font-size:12px;color:var(--muted)}.kpi strong{display:block;font-size:29px;font-weight:680;letter-spacing:-1px;margin:6px 0}.kpi small{color:var(--muted)}.section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:25px 0 14px}.section-head h2{font-size:19px;font-weight:700;letter-spacing:-.45px;margin:0}.section-head p{font-size:12px;color:var(--muted);margin:5px 0 0}.segmented{display:flex;padding:4px;background:#e8eeef;border-radius:9px;gap:2px}.segmented button{font-size:11px;padding:7px 11px;background:none;border-radius:6px;color:var(--muted)}.segmented button.active{background:white;color:var(--ink);box-shadow:0 1px 4px #0001}.grid-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.card{background:white;border:1px solid var(--line);border-radius:14px;padding:18px}.card .title{display:flex;justify-content:space-between;align-items:start;gap:8px;font-size:12px;font-weight:650}.metric-value{font-size:29px;letter-spacing:-.7px;line-height:1.2;font-weight:650;margin:13px 0 9px}.metric-value small{font-size:12px;color:var(--muted);font-weight:450;letter-spacing:0}.card p{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.5}.card .explain{display:block;color:var(--muted);padding:0;background:none;font-size:11px;text-decoration:underline;margin-top:11px}.tag{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:700;line-height:1.3;padding:5px 8px;border-radius:6px;white-space:nowrap}.tag.normal{background:#e4f3ed;color:#15725f}.tag.attention{background:#fff0cd;color:#8b5b05}.tag.stress{background:#fce6e6;color:#a4333e}.tag.unknown{background:#eef1f4;color:#647482}.tag.info{background:#e7edf9;color:#35558c}.card .bar{height:3px;background:#eef2f3;border-radius:3px;overflow:hidden;margin-top:13px}.bar i{height:100%;display:block;background:var(--green)}.twocol{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:17px}.panel{background:white;border:1px solid var(--line);border-radius:var(--radius);padding:22px}.panel h3{font-size:14px;margin-bottom:7px}.subtle{font-size:11px;color:var(--muted);line-height:1.6}.chart{margin-top:16px}.legend{display:flex;gap:15px;font-size:10px;color:var(--muted);margin-top:6px}.legend span:before{content:"";display:inline-block;width:15px;height:3px;background:var(--green);vertical-align:middle;margin-right:6px}.legend span:last-child:before{background:var(--blue)}.change{padding:13px 0;border-bottom:1px solid var(--line);font-size:12px}.change:last-child{border-bottom:0}.change small{display:block;color:var(--muted);margin-top:5px}.empty{padding:28px 13px;text-align:center;font-size:13px;line-height:1.7;color:var(--muted);border:1px dashed var(--line);border-radius:10px}.tools{display:flex;flex-wrap:wrap;gap:9px;margin:16px 0}.tools input[type=search]{min-width:190px;flex:1}.tools input,.tools select{background:white;border:1px solid var(--line);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--ink)}.tools label{display:flex;align-items:center;gap:6px;font-size:12px}.table-wrap{overflow:auto;background:white;border:1px solid var(--line);border-radius:13px}table{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}th{text-align:left;background:#f8faf9;padding:14px 16px;color:var(--muted);font-weight:550;font-size:10px;text-transform:uppercase;letter-spacing:.5px}td{padding:15px 16px;border-top:1px solid #eef1f2}td strong{font-size:12px}td small{display:block;color:var(--muted);font-size:10px;margin-top:4px;max-width:220px;overflow:hidden;text-overflow:ellipsis}.number{font-variant-numeric:tabular-nums}.down{color:var(--red)}.up{color:var(--green)}.rowbutton{font-size:12px;font-weight:750;color:var(--ink);background:none;padding:0}.rowbutton:hover{text-decoration:underline}.mini-spark{width:85px;height:30px}.pager{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--muted);margin-top:12px}.pager button{padding:7px 11px;border:1px solid var(--line);border-radius:6px;background:white;color:var(--ink)}.pager button:disabled{opacity:.4;cursor:default}.macro-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.article{padding:17px 0;border-bottom:1px solid var(--line)}.article a{font-size:14px;color:var(--ink);text-decoration:none;line-height:1.5;font-weight:600}.article a:hover{text-decoration:underline}.article small{color:var(--muted);display:block;margin-top:8px}.footer{border-top:1px solid var(--line);margin-top:35px;padding-top:20px;font-size:11px;color:var(--muted);display:flex;justify-content:space-between;gap:20px;line-height:1.7}.view[hidden]{display:none!important}dialog{border:1px solid var(--line);border-radius:18px;max-width:620px;width:calc(100% - 32px);padding:28px;color:var(--ink);box-shadow:0 20px 80px #102d3b35}dialog::backdrop{background:#102d3b88;backdrop-filter:blur(2px)}dialog h2{font-size:23px;letter-spacing:-.5px}dialog p{font-size:13px}dialog .close{float:right;background:#edf1f2;border-radius:6px;padding:6px 10px}dialog dl{display:grid;grid-template-columns:1fr 1fr;font-size:12px;gap:10px}dialog dt{color:var(--muted)}dialog dd{margin:0;text-align:right}.loading{padding:50px;text-align:center;color:var(--muted)}.quality-list{max-height:500px;overflow:auto}.info-box{padding:17px;background:#f0f5f5;border-radius:12px;font-size:12px;line-height:1.7}.livepanel{border-left:3px solid #487db2;margin-top:18px}.liveitems{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}.liveitems span{font-size:11px;background:#edf3f8;padding:8px;border-radius:6px}.mobile-note{display:none}.rule-list{font-size:13px;line-height:1.8;padding-left:20px}.meter{height:7px;background:#e8edef;border-radius:5px;overflow:hidden;margin:12px 0}.meter span{display:block;height:100%;background:var(--green)}
@@ -13,6 +15,7 @@
 
 .topbar{flex-wrap:wrap}.actions{flex-wrap:wrap}.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px}.btn:disabled{opacity:.6;cursor:wait}.scan-box{margin:-10px 0 20px;padding:13px 16px;background:#fff;border:1px solid var(--line);border-radius:11px;font-size:12px;line-height:1.7}.scan-box p{margin:0 0 5px}.scan-box .small-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.scan-box .small-actions button{background:none;padding:0;color:var(--green);font-size:12px;text-decoration:underline}.scan-box [hidden]{display:none!important}.auth-input{display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;margin:9px 0 15px}.auth-label{font-size:13px;font-weight:650}.auth-steps{font-size:13px;line-height:1.8;padding-left:22px}.auth-actions{display:flex;gap:10px;margin-top:15px}.auth-error{color:var(--red);font-size:13px}.auth-note{background:#f0f5f5;padding:12px;border-radius:10px}
 @media(max-width:720px){.actions{width:100%}.actions .btn{flex:1}.scan-box{margin-top:-8px}}
+.auth-remember{display:flex;gap:10px;align-items:flex-start;margin:17px 0;font-size:13px;cursor:pointer}.auth-remember input{width:17px;height:17px;margin-top:2px;accent-color:var(--green)}.auth-remember small{display:block;color:var(--muted);margin-top:4px;font-size:11px;line-height:1.5}.auth-help{margin-top:16px;font-size:12px;color:var(--muted);line-height:1.6}.auth-help summary{cursor:pointer}.auth-help p,.auth-help ol{margin:10px 0 0}#githubAuth{max-height:85vh;overflow:auto}
 </style>
 </head>
 <body>
@@ -44,10 +47,23 @@
 </section>
 <section class="view" data-section="news" hidden><div class="panel"><h3>Notizie collegate al mercato e agli alert</h3><p class="subtle">Fonte e orario sempre visibili. Una notizia associata a un titolo non dimostra la causa del ribasso. Feed EODHD filtrato per fonti ammesse. Testate, fonti istituzionali e comunicati sono distinti; titoli originali, nessuna traduzione automatica. La copertura dipende dal fornitore e non è esaustiva.</p><div id="newsRows"></div></div></section>
 <section class="view" data-section="quality" hidden><div class="twocol" style="margin-top:0"><div class="panel"><h3>Copertura della watchlist</h3><div id="coverage"></div></div><div class="panel"><h3>Consumo del piano</h3><div id="usage"></div></div></div><div class="section-head"><div><h2>Eccezioni da controllare</h2><p>Assenza di un prezzo non significa che il titolo sia stato cancellato dal listino.</p></div></div><div class="quality-list table-wrap"><table><thead><tr><th>Ticker</th><th>Problema</th><th>Disponibile</th><th>Atteso</th></tr></thead><tbody id="qualityRows"></tbody></table></div><div class="panel" style="margin-top:18px"><h3>Regole e limiti della versione</h3><ul class="rule-list" id="limits"></ul></div></section>
-<footer class="footer"><span>Stock Monitor · Radar 5.1.1 · versione pilota affiancata · <a href="index.html">Apri il monitor attuale</a><br>Informazioni di mercato, nessun accesso al conto o invio di ordini.</span><span><a href="https://eodhd.com/financial-apis/" target="_blank" rel="noopener noreferrer">Dati EODHD</a> · <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer">Contesto FRED</a><br>Gli orari sono mostrati in Europe/Madrid.</span></footer>
+<footer class="footer"><span>Stock Monitor · Radar 5.1.2 · versione pilota affiancata · <a href="index.html">Apri il monitor attuale</a><br>Informazioni di mercato, nessun accesso al conto o invio di ordini.</span><span><a href="https://eodhd.com/financial-apis/" target="_blank" rel="noopener noreferrer">Dati EODHD</a> · <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer">Contesto FRED</a><br>Gli orari sono mostrati in Europe/Madrid.</span></footer>
 </div></main></div>
 <dialog id="detail"><button class="close" id="closeDetail" aria-label="Chiudi scheda">✕</button><div id="detailContent"></div></dialog>
-<dialog id="githubAuth" aria-labelledby="authTitle"><h2 id="authTitle">Collega GitHub per aggiornare il mercato</h2><p>Questo collegamento permette al pulsante di avviare <b>Radar nuovo</b> nel tuo repository <b>stock-monitor</b>.</p><ol class="auth-steps"><li>Apri <a href="https://github.com/settings/personal-access-tokens/new?name=Stock%20Monitor%20Radar&amp;target_name=chry791&amp;expires_in=30&amp;actions=write" target="_blank" rel="noopener noreferrer">la creazione del token GitHub</a>.</li><li>In <b>Repository access</b> scegli <b>Only select repositories</b>, poi <b>stock-monitor</b>.</li><li>Controlla che <b>Actions</b> abbia <b>Read and write</b>; non aggiungere altri permessi. <b>Metadata: Read</b> è automatico.</li><li>Premi <b>Generate token</b> e incolla qui il codice generato.</li></ol><p class="auth-note">Il codice viene inviato solo all’API di GitHub e rimane nella memoria di questa scheda. Non viene salvato nel sito o nel browser: chiudendo o ricaricando la pagina dovrai reinserirlo. Non incollarlo in chat. Non è la chiave EODHD.</p><form id="githubAuthForm"><label class="auth-label" for="githubToken">Token GitHub fine-grained</label><input class="auth-input" id="githubToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required placeholder="github_pat_…"><p id="authError" class="auth-error" role="alert"></p><div class="auth-actions"><button class="btn primary" type="submit">Collega e aggiorna</button><button class="btn" type="button" id="cancelGitHub">Annulla</button></div></form></dialog>
+<dialog id="githubAuth" aria-labelledby="authTitle">
+<h2 id="authTitle">Collega GitHub una volta</h2>
+<p>Incolla il token GitHub che usi già per Stock Monitor. Con il salvataggio attivo, alle prossime aperture basterà premere <b>Aggiorna mercato</b>.</p>
+<form id="githubAuthForm">
+<label class="auth-label" for="githubToken">Token GitHub fine-grained</label>
+<input class="auth-input" id="githubToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required placeholder="github_pat_…">
+<label class="auth-remember"><input type="checkbox" id="rememberGitHub" checked><span><b>Ricorda su questo browser personale</b><small>Resta collegato anche dopo aver chiuso o ricaricato la pagina.</small></span></label>
+<p class="auth-note">Il token viene conservato nei dati di questo browser e inviato soltanto all’API di GitHub. Non viene pubblicato nel repository. Usa il salvataggio solo sul tuo dispositivo personale: chi usa questo profilo del browser può utilizzare il collegamento.</p>
+<p id="authError" class="auth-error" role="alert"></p>
+<div class="auth-actions"><button class="btn primary" id="connectGitHub" type="submit">Salva e aggiorna</button><button class="btn" type="button" id="cancelGitHub">Annulla</button></div>
+</form>
+<details class="auth-help"><summary>Se non hai più il token</summary><ol class="auth-steps"><li>Apri <a href="https://github.com/settings/personal-access-tokens/new?name=Stock%20Monitor%20Radar&amp;target_name=chry791&amp;expires_in=30&amp;actions=write" target="_blank" rel="noopener noreferrer">la creazione del token GitHub</a>.</li><li>In <b>Repository access</b> scegli <b>Only select repositories</b>, poi <b>stock-monitor</b>.</li><li>Controlla che <b>Actions</b> abbia <b>Read and write</b>; non aggiungere altri permessi. <b>Metadata: Read</b> è automatico.</li><li>Premi <b>Generate token</b> e incolla qui il codice generato.</li></ol><p>Usa un token limitato al repository <b>stock-monitor</b>, con <b>Actions: Read and write</b>. Non è la chiave EODHD e non va incollato in chat.</p></details>
+<details class="auth-help"><summary>Come funziona il salvataggio</summary><p>Il token è nei dati locali del sito, non in un gestore password cifrato: il codice eseguito sul dominio chry791.github.io può leggerlo. Con <b>Scollega e dimentica</b> rimuovi il salvataggio da questo browser; il token resta valido su GitHub finché non lo revochi. Scadenza, revoca, cancellazione dei dati del sito o navigazione privata possono richiedere un nuovo collegamento.</p></details>
+</dialog>
 <script>
 'use strict';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -205,20 +221,69 @@ function exportRows(){const cols=['ticker','name','area','asof','quote_time','ob
 $('snapshotView').addEventListener('click',()=>selectDataView('snapshot'));
 $('dailyView').addEventListener('click',()=>selectDataView('daily'));
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));$('areas').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{AREA=b.dataset.area;$('areas').querySelectorAll('button').forEach(c=>c.classList.toggle('active',c===b));drawIndicators();}));['search','stockArea','stockMode','candidates'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',()=>{PAGE=0;drawStocks();}));$('prev').addEventListener('click',()=>{PAGE--;drawStocks();});$('next').addEventListener('click',()=>{PAGE++;drawStocks();});$('export').addEventListener('click',exportRows);$('reload').addEventListener('click',load);$('closeDetail').addEventListener('click',()=>$('detail').close());$('method').addEventListener('click',()=>showDetail('<div class="eyebrow">Una lettura trasparente</div><h2>Il tuo osservatorio, ogni giorno.</h2><p><b>Flash titoli:</b> intercetta le variazioni della watchlist. CANDIDATO indica soltanto il rispetto dei filtri di prezzo.</p><p><b>Termometri:</b> tendenza, partecipazione, diffusione dei ribassi e volatilità. Le spie possono essere correlate: il loro numero non è una probabilità di crisi.</p><p><b>Data e copertura:</b> ogni indicatore porta la data effettiva. Sotto l’80% di copertura dell’universo, la misura regionale non riceve un colore operativo.</p><p><b>Soglie pilota:</b> descrivono condizioni osservate. La capacità di anticipare crisi deve essere verificata su nuovi periodi, contando falsi allarmi e segnali mancati.</p><p><b>Contesto macro:</b> le frequenze giornaliere, settimanali e mensili rimangono separate. Le quote di investimento e il conto Scalable non fanno parte di questo software.</p>'));
-// Authorization stays in this page's memory. It is never stored or put in a URL.
+// User-selected credential persistence is local to this browser; never in files or URLs.
 const MarketRefresh=(()=>{
   const ROOT='https://api.github.com/repos/chry791/stock-monitor';
   const WORKFLOW='/actions/workflows/radar.yml';
   const RUNS=WORKFLOW+'/runs?branch=main&per_page=30';
   const ACTIVE=new Set(['queued','in_progress','requested','waiting','pending']);
   let token='',busy=false,generation=0;
+  const TOKEN_KEY='stock-monitor:chry791:stock-monitor:github-token:v1';
+  const OFFICIAL_ORIGIN='https://chry791.github.io';
+  let remember=false,savedToken='',storageNotice='';
+  const validToken=value=>typeof value==='string'&&/^github_pat_[A-Za-z0-9_]{1,500}$/.test(value);
+  function savedCredential(){
+    if(location.origin!==OFFICIAL_ORIGIN)return '';
+    const raw=localStorage.getItem(TOKEN_KEY);
+    if(!raw)return '';
+    const record=JSON.parse(raw);
+    if(record?.version!==1||!validToken(record.token))throw new Error('INVALID_SAVED_CREDENTIAL');
+    return record.token;
+  }
+  function forgetSaved(expected){
+    if(location.origin!==OFFICIAL_ORIGIN)return;
+    try{
+      // A delayed response for an old credential must not remove a new one.
+      if(expected&&savedCredential()!==expected)return;
+      localStorage.removeItem(TOKEN_KEY);
+      savedToken='';storageNotice='';
+    }catch{
+      savedToken='';
+      storageNotice='Il browser non permette di cancellare il collegamento salvato. Cancella i dati del sito nelle impostazioni del browser.';
+    }
+  }
+  function restoreSaved(){
+    token='';remember=false;savedToken='';storageNotice='';
+    try{
+      const value=savedCredential();
+      if(value){token=value;remember=true;savedToken=value;}
+    }catch{
+      try{localStorage.removeItem(TOKEN_KEY);}catch{}
+      storageNotice='Salvataggio non disponibile o non leggibile in questo browser. Puoi collegarti per questa scheda.';
+    }
+  }
+  function persistValidated(value,current){
+    if(!remember||value!==token||current!==generation||location.origin!==OFFICIAL_ORIGIN||savedToken===value)return;
+    try{
+      localStorage.setItem(TOKEN_KEY,JSON.stringify({version:1,token:value}));
+      if(savedCredential()!==value)throw new Error('STORAGE_NOT_SAVED');
+      savedToken=value;storageNotice='';
+    }catch{
+      savedToken='';
+      storageNotice='Il browser blocca il salvataggio: il collegamento vale solo per questa scheda. Consenti i dati del sito e usa una finestra normale.';
+    }
+    controls();
+  }
+
   const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const say=message=>{$('scanStatus').textContent=message;};
   const controls=()=>{
     $('refreshMarket').disabled=busy;
     $('refreshMarket').textContent=busy?'Scansione in corso…':'↻ Aggiorna mercato';
     $('disconnectGitHub').hidden=!token;
-    $('githubConnection').textContent=token?'GitHub collegato per questa scheda.':'GitHub da collegare per avviare una scansione.';
+    $('disconnectGitHub').textContent='Scollega e dimentica';
+    const state=token?(savedToken===token?'GitHub ricordato su questo browser.':'GitHub collegato per questa scheda.'):'GitHub da collegare per avviare una scansione.';
+    $('githubConnection').textContent=state+(storageNotice?' '+storageNotice:'');
   };
   const check=current=>{if(current!==generation)throw new Error('STOPPED');};
   function runLink(id){
@@ -229,13 +294,15 @@ const MarketRefresh=(()=>{
   }
   async function api(path,method='GET',body){
     const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    const requestToken=token,requestGeneration=generation;
     try{
-      const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10',Authorization:'Bearer '+token};
+      const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10',Authorization:'Bearer '+requestToken};
       if(body)headers['Content-Type']='application/json';
       const response=await fetch(ROOT+path,{method,headers,body:body?JSON.stringify(body):undefined,signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
       if(!response.ok){
         const error=new Error('HTTP_'+response.status);error.status=response.status;throw error;
       }
+      persistValidated(requestToken,requestGeneration);
       if(response.status===204)return null;
       return await response.json();
     }finally{clearTimeout(timer);}
@@ -331,7 +398,7 @@ const MarketRefresh=(()=>{
       await monitor(id,current);
     }catch(error){
       if(error.message==='STOPPED'||current!==generation)return;
-      if(error.status===401){token='';say('Autorizzazione scaduta o non valida. Premi «Aggiorna mercato» per collegare un nuovo token.');}
+      if(error.status===401){forgetSaved(token);token='';remember=false;savedToken='';say('Autorizzazione scaduta o non valida. Premi «Aggiorna mercato» per collegare un nuovo token.');}
       else if(error.status===403)say('GitHub non autorizza questa operazione oppure ha applicato un limite alle richieste. Controlla il token: repository stock-monitor, Actions «Read and write».');
       else if(error.status===404)say('GitHub non trova la scansione o il token non ha accesso al repository stock-monitor. Controlla l’autorizzazione.');
       else if(error.status===422)say('GitHub non ha accettato la richiesta. Controlla che Radar nuovo sia attivo sul ramo main e consenta l’avvio manuale.');
@@ -342,22 +409,31 @@ const MarketRefresh=(()=>{
   }
   function connect(){
     const input=$('githubToken'),value=input.value.trim();
-    if(!value.startsWith('github_pat_')){
+    if(!validToken(value)){
       $('authError').textContent='Inserisci il token fine-grained di GitHub. Non usare la chiave EODHD.';return;
     }
+    if(location.origin!==OFFICIAL_ORIGIN){input.value='';say('Apri il Radar pubblicato per collegare GitHub.');return;}
+    storageNotice='';remember=$('rememberGitHub').checked;
+    if(!remember)forgetSaved();
     token=value;input.value='';$('authError').textContent='';$('githubAuth').close();controls();
     return start();
   }
   function disconnect(){
-    generation++;token='';busy=false;$('githubToken').value='';controls();
-    say('GitHub scollegato da questa pagina. Un’eventuale scansione già avviata continua su GitHub.');
+    generation++;forgetSaved();token='';remember=false;savedToken='';busy=false;$('githubToken').value='';controls();
+    say('GitHub scollegato da questo browser. Un’eventuale scansione già avviata continua su GitHub.');
   }
   $('refreshMarket').addEventListener('click',start);
   $('disconnectGitHub').addEventListener('click',disconnect);
   $('githubAuthForm').addEventListener('submit',event=>{event.preventDefault();connect();});
   $('cancelGitHub').addEventListener('click',()=>$('githubAuth').close());
+  $('rememberGitHub').addEventListener('change',()=>{$('connectGitHub').textContent=$('rememberGitHub').checked?'Salva e aggiorna':'Collega per questa scheda';});
+  window.addEventListener('storage',event=>{
+    if(event.key!==TOKEN_KEY&&event.key!==null)return;
+    generation++;busy=false;restoreSaved();controls();
+    say(token?'Collegamento aggiornato da un’altra scheda. Premi Aggiorna mercato quando vuoi.':'Collegamento rimosso da un’altra scheda. Un’eventuale scansione già avviata continua su GitHub.');
+  });
   $('githubAuth').addEventListener('close',()=>{$('githubToken').value='';$('authError').textContent='';});
-  controls();
+  restoreSaved();controls();
   return {start,connect,disconnect};
 })();
 
