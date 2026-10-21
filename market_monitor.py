@@ -9,6 +9,10 @@ import argparse
 import csv
 import hashlib
 import html
+import re
+import unicodedata
+import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
 import io
 import json
 import math
@@ -394,7 +398,127 @@ NEWS_SOURCE_TYPES = {
     "ec.europa.eu": ("Commissione europea", "institution"),
     "businesswire.com": ("Business Wire", "press_release"),
     "globenewswire.com": ("GlobeNewswire", "press_release"),
+    "finance.yahoo.com": ("Yahoo Finance", "aggregator"),
 }
+
+OFFICIAL_NEWS_FEEDS = (
+    ("fed_press", "Federal Reserve · comunicati", "https://www.federalreserve.gov/feeds/press_all.xml", "federalreserve.gov"),
+    ("fed_speeches", "Federal Reserve · interventi", "https://www.federalreserve.gov/feeds/speeches_and_testimony.xml", "federalreserve.gov"),
+    ("ecb_press", "BCE · comunicati e interventi", "https://www.ecb.europa.eu/rss/press.html", "ecb.europa.eu"),
+)
+
+
+def news_topics(tags, has_symbols=False):
+    """Descriptive categories from provider tags, never a cause of a price move."""
+    normalized = {re.sub(r"[ _]+", "-", str(t).lower()) for t in tags}
+    result = []
+    groups = {
+        "macro": {"economy", "macroeconomics", "inflation", "interest-rates", "monetary-policy", "central-banks", "federal-reserve", "ecb", "gdp", "employment", "tariffs", "trade-policy"},
+        "earnings": {"earnings", "earnings-report", "earnings-results", "earnings-release", "earnings-per-share", "quarterly-results", "financial-results", "guidance", "earnings-surprise"},
+        "crypto": {"crypto", "cryptocurrency", "bitcoin", "ethereum", "digital-assets"},
+        "markets": {"markets", "stock-market", "bonds", "treasuries", "forex", "commodities", "oil", "gold"},
+    }
+    for category, terms in groups.items():
+        if normalized & terms:
+            result.append(category)
+    return result or (["companies"] if has_symbols else ["markets"])
+
+
+def parse_official_feed(data, feed_url):
+    """Parse RSS/Atom headlines, dates and links. Never publish article bodies."""
+    if len(data) > 1024 * 1024 or b"<!DOCTYPE" in data.upper() or b"<!ENTITY" in data.upper():
+        raise ValueError("unsupported_feed")
+    root = ET.fromstring(data)
+    local = lambda name: name.rsplit("}", 1)[-1]
+    if local(root.tag) not in {"rss", "RDF", "feed"}:
+        raise ValueError("not_a_feed")
+    rows = []
+    for entry in (x for x in root.iter() if local(x.tag) in {"item", "entry"}):
+        fields = {}
+        links = []
+        for child in entry:
+            name = local(child.tag)
+            fields.setdefault(name, "".join(child.itertext()).strip())
+            if name == "link" and child.attrib.get("rel", "alternate") == "alternate":
+                links.append(child.attrib.get("href") or fields[name])
+        value = fields.get("pubDate") or fields.get("published") or fields.get("date") or fields.get("updated", "")
+        try:
+            try:
+                when = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except ValueError:
+                when = parsedate_to_datetime(value)
+            value = when.isoformat() if when.tzinfo is not None else ""
+        except (ValueError, TypeError, OverflowError):
+            value = ""
+        rows.append({"title": fields.get("title", ""), "date": value,
+                     "link": urllib.parse.urljoin(feed_url, links[0]) if links else "", "symbols": []})
+        if len(rows) >= 100:
+            break
+    return rows
+
+
+def fetch_official_news(config, now):
+    def fetch(feed):
+        ident, name, url, domain = feed
+        status = {"id": ident, "name": name, "url": url, "status": "ok", "received": 0, "accepted": 0, "rejected": {}}
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "StockMonitor/5 personal research", "Accept": "application/rss+xml, application/atom+xml, text/xml"})
+            with urllib.request.urlopen(req, timeout=12) as response:
+                final = urllib.parse.urlsplit(response.geturl())
+                if final.scheme != "https" or not ((final.hostname or "") == domain or (final.hostname or "").endswith("." + domain)):
+                    raise ValueError("unexpected_feed_redirect")
+                data = response.read(1024 * 1024 + 1)
+            rows = parse_official_feed(data, url)
+            accepted, rejected, _ = filter_news(rows, [domain], now, max_age_days=news_settings(config)["days"])
+            for item in accepted:
+                item.update(topics=["macro"], retrieval_sources=[ident])
+            status.update(received=len(rows), accepted=len(accepted), rejected=rejected)
+            return accepted, status
+        except urllib.error.HTTPError as exc:
+            status.update(status="error", error="http_" + str(exc.code))
+        except Exception as exc:
+            status.update(status="error", error=type(exc).__name__)
+        return [], status
+    if not config.get("news_official_feeds", True):
+        return [], []
+    records, statuses = [], []
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        for items, status in pool.map(fetch, OFFICIAL_NEWS_FEEDS):
+            records.extend(items)
+            statuses.append(status)
+    return records, statuses
+
+
+def deduplicate_news(records):
+    """Merge canonical URLs and identical long headlines on the same UTC day."""
+    unique, urls, titles = [], {}, {}
+    ranks = {"institution": 0, "editorial": 1, "press_release": 2, "aggregator": 3}
+    for item in sorted(records, key=lambda n: (n["date"], n["url"]), reverse=True):
+        item = {**item}
+        p = urllib.parse.urlsplit(item["url"])
+        host = "finance.yahoo.com" if p.hostname == "finance.yahoo.com" or (p.hostname or "").endswith(".finance.yahoo.com") else p.hostname
+        key = urllib.parse.urlunsplit((p.scheme, host or "", p.path, p.query, ""))
+        normalized = " ".join(re.findall(r"\w+", unicodedata.normalize("NFKC", item["title"]).casefold()))
+        title_key = (normalized, item["date"][:10]) if len(normalized) >= 50 else None
+        index = urls.get(key)
+        if index is None and title_key:
+            index = titles.get(title_key)
+        if index is None:
+            index = len(unique)
+            unique.append(item)
+        else:
+            old = unique[index]
+            winner = item if ranks.get(item["source_type"], 9) < ranks.get(old["source_type"], 9) else old
+            merged = {**winner}
+            for field in ("tickers", "topics", "retrieval_sources"):
+                merged[field] = sorted(set(old.get(field, [])) | set(item.get(field, [])))
+            unique[index] = merged
+        urls[key] = index
+        if title_key:
+            titles[title_key] = index
+    for item in unique:
+        item["ticker"] = item["tickers"][0] if len(item.get("tickers", [])) == 1 else None
+    return sorted(unique, key=lambda n: (n["date"], n["url"]), reverse=True)
 
 
 def news_settings(config):
@@ -404,6 +528,8 @@ def news_settings(config):
         "max_pages": max(1, min(3, int(config.get("news_max_pages", 3)))),
         "days": max(1, min(7, int(config.get("news_lookback_days", 3)))),
         "max_tickers": max(0, min(20, int(config.get("news_max_tickers", 20)))),
+        "max_items": max(50, min(500, int(config.get("news_max_items", 300)))),
+        "target_items": max(1, min(100, int(config.get("news_target_items", 50)))),
     }
 
 
@@ -464,9 +590,16 @@ def filter_news(rows, allowed, now, ticker=None, max_age_days=7):
                                        if not k.lower().startswith("utm_") and k.lower() not in ("guccounter", "guce_referrer", "guce_referrer_sig")])
         url = urllib.parse.urlunsplit(("https", host, p.path or "/", query, ""))
         publisher, kind = NEWS_SOURCE_TYPES.get(domain, (host, "allowed_source"))
+        tags = row.get("tags", [])
+        tags = [t[:80] for t in tags[:40] if isinstance(t, str)] if isinstance(tags, list) else []
+        tag_keys = {re.sub(r"[ _]+", "-", t.lower()) for t in tags}
+        content_kind = "press_release" if kind == "press_release" or tag_keys & {"press-releases", "press-release", "company-announcement", "european-regulatory-news"} else kind
         out.append({"title": title, "url": url, "source": host, "publisher": publisher,
                     "source_type": kind, "date": when.astimezone(timezone.utc).isoformat(),
-                    "symbols": symbols, "ticker": ticker if ticker in symbols else None})
+                    "symbols": symbols, "ticker": ticker if ticker in symbols else None,
+                    "original_publisher": None if kind == "aggregator" else publisher,
+                    "content_kind": content_kind, "kind_basis": "feed_tags" if content_kind != kind else "domain",
+                    "topics": news_topics(tags, bool(symbols)), "retrieval_sources": ["eodhd"]})
     return out, rejected, blocked_domains
 
 
@@ -480,7 +613,7 @@ def collect_news(client, config, alerts, now):
     all_targets = list(dict.fromkeys(alerts))
     targets = all_targets[:settings["max_tickers"]]
     known_alerts = set(all_targets)
-    by_url = {}
+    records = []
     diagnostics = {
         "started_at": now.isoformat(), "lookback_days": settings["days"],
         "requested_tickers": targets, "alerts_total": len(all_targets),
@@ -489,6 +622,7 @@ def collect_news(client, config, alerts, now):
         "eligible_records": 0, "rejected": {}, "excluded_domains": {},
         "errors": [], "limited_queries": [],
         "allowed_domains": config["news_allowed_domains"],
+        "target_items": settings["target_items"],
     }
     for ticker in [None] + targets:
         for page in range(settings["max_pages"]):
@@ -515,23 +649,37 @@ def collect_news(client, config, alerts, now):
                 # Exact provider symbol tags only: never infer a cause or company from text.
                 item["tickers"] = sorted(known_alerts.intersection(item.pop("symbols")))
                 item["ticker"] = item["tickers"][0] if len(item["tickers"]) == 1 else None
-                old = by_url.get(item["url"])
-                if old:
-                    tags = sorted(set(old["tickers"]) | set(item["tickers"]))
-                    item = old if old["date"] >= item["date"] else item
-                    item["tickers"] = tags
-                    item["ticker"] = tags[0] if len(tags) == 1 else None
-                by_url[item["url"]] = item
+                records.append(item)
             if len(raw) < settings["page_size"]:
                 break
             if page + 1 == settings["max_pages"]:
                 diagnostics["limited_queries"].append(ticker or "market")
-    news = sorted(by_url.values(), key=lambda n: (n["date"], n["url"]), reverse=True)
+    official, statuses = fetch_official_news(config, now)
+    diagnostics["official_feeds"] = statuses
+    diagnostics["eodhd_received"] = diagnostics["received"]
+    for item in official:
+        item.pop("symbols", None)
+        item.update(tickers=[], ticker=None)
+        records.append(item)
+    for status in statuses:
+        diagnostics["received"] += status["received"]
+        diagnostics["eligible_records"] += status["accepted"]
+        for key, count in status["rejected"].items():
+            diagnostics["rejected"][key] = diagnostics["rejected"].get(key, 0) + count
+    all_news = deduplicate_news(records)
+    priority = [n for n in all_news if n.get("tickers") or n["source_type"] == "institution"][:settings["max_items"]]
+    selected_urls = {n["url"] for n in priority}
+    remaining = [n for n in all_news if n["url"] not in selected_urls]
+    news = sorted(priority + remaining[:settings["max_items"]-len(priority)], key=lambda n: (n["date"], n["url"]), reverse=True)
     diagnostics["admitted"] = len(news)
-    diagnostics["duplicates_removed"] = diagnostics["eligible_records"] - len(news)
+    diagnostics["unique_available"] = len(all_news)
+    diagnostics["not_published_due_to_limit"] = len(all_news) - len(news)
+    diagnostics["target_met"] = len(news) >= settings["target_items"]
+    diagnostics["duplicates_removed"] = diagnostics["eligible_records"] - len(all_news)
     diagnostics["finished_at"] = datetime.now(timezone.utc).isoformat()
-    if diagnostics["errors"]:
-        status = "partial" if diagnostics["successful_requests"] else "unavailable"
+    failed_rss = any(s["status"] == "error" for s in statuses)
+    if diagnostics["errors"] or failed_rss:
+        status = "partial" if diagnostics["successful_requests"] or any(s["status"] == "ok" for s in statuses) else "unavailable"
     elif news:
         status = "ok"
     else:

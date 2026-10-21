@@ -1,5 +1,5 @@
 {
-  "version": "5.1.1-news",
+  "version": "5.2.0-newsroom",
   "drop_pct": -5.0,
   "candidate_distance_pct": -10.0,
   "min_coverage_pct": 80.0,
@@ -24,7 +24,8 @@
     "bloomberg.com",
     "ft.com",
     "wsj.com",
-    "marketwatch.com"
+    "marketwatch.com",
+    "finance.yahoo.com"
   ],
   "benchmarks": {
     "SPY.US": {
@@ -110,5 +111,8 @@
   "snapshot_max_age_minutes": 35,
   "news_page_size": 100,
   "news_max_pages": 3,
-  "news_lookback_days": 3
+  "news_lookback_days": 3,
+  "news_max_items": 300,
+  "news_target_items": 50,
+  "news_official_feeds": true
 }
