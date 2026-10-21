@@ -10,6 +10,9 @@
 @media(max-width:1100px){.shell{grid-template-columns:165px 1fr}.sidebar{padding:30px 15px}.main{padding:24px}.grid-cards{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}.hero .spark-box{display:none}.kpi{padding:15px}.twocol{grid-template-columns:1fr}.macro-grid{grid-template-columns:1fr 1fr}.topbar{align-items:flex-start}}
 @media(max-width:720px){.shell{display:block}.sidebar{position:static;height:auto;padding:17px 18px 9px;border-right:0;border-bottom:1px solid var(--line)}.brand{font-size:17px;line-height:1;gap:8px}.brand br{display:none}.brand-mark{width:22px;height:25px}.edition,.side-footer{display:none}.nav{display:flex;overflow:auto;gap:3px;margin-top:13px}.nav button{padding:9px 12px;white-space:nowrap;font-size:12px}.nav button span{display:none}.main{padding:21px 16px}.topbar h1{font-size:20px}.topbar{gap:10px}.actions .date{display:none}.hero{padding:24px}.hero h2{font-size:29px}.kpis{grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:22px}.kpi strong{font-size:25px}.kpi{padding:15px}.grid-cards{gap:10px}.card{padding:14px}.metric-value{font-size:25px}.card .title{display:block}.card .title .tag{margin-top:7px}.section-head{align-items:flex-start;flex-direction:column}.segmented{align-self:stretch}.segmented button{flex:1}.macro-grid{grid-template-columns:1fr}.panel{padding:17px}.footer{display:block}.footer a{display:block;margin-top:8px}.tools input[type=search]{min-width:100%;width:100%}.mini-spark{width:65px}.mobile-note{display:block}th,td{padding:12px}.hero p{font-size:12px}}
 @media(prefers-reduced-motion:no-preference){button,a{transition:background .15s,color .15s}.card{animation:appear .3s ease both}@keyframes appear{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}}
+
+.topbar{flex-wrap:wrap}.actions{flex-wrap:wrap}.btn{text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:5px}.btn:disabled{opacity:.6;cursor:wait}.scan-box{margin:-10px 0 20px;padding:13px 16px;background:#fff;border:1px solid var(--line);border-radius:11px;font-size:12px;line-height:1.7}.scan-box p{margin:0 0 5px}.scan-box .small-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px}.scan-box .small-actions button{background:none;padding:0;color:var(--green);font-size:12px;text-decoration:underline}.scan-box [hidden]{display:none!important}.auth-input{display:block;width:100%;padding:12px;border:1px solid var(--line);border-radius:8px;margin:9px 0 15px}.auth-label{font-size:13px;font-weight:650}.auth-steps{font-size:13px;line-height:1.8;padding-left:22px}.auth-actions{display:flex;gap:10px;margin-top:15px}.auth-error{color:var(--red);font-size:13px}.auth-note{background:#f0f5f5;padding:12px;border-radius:10px}
+@media(max-width:720px){.actions{width:100%}.actions .btn{flex:1}.scan-box{margin-top:-8px}}
 </style>
 </head>
 <body>
@@ -18,7 +21,8 @@
 <nav class="nav" aria-label="Sezioni"><button class="active" data-view="overview"><span>◈</span> Panoramica</button><button data-view="stocks"><span>↘</span> Flash titoli</button><button data-view="news"><span>≡</span> Notizie</button><button data-view="quality"><span>◎</span> Qualità dati</button></nav>
 <div class="side-footer">Osservare. Capire. Decidere.<br>Le scelte restano tue.<a href="index.html">Monitor attuale ↗</a><a href="https://github.com/chry791/stock-monitor" target="_blank" rel="noopener noreferrer">Repository GitHub ↗</a></div></aside>
 <main class="main">
-<header class="topbar"><div><div class="eyebrow">Radar nuovo · confronto con il monitor attuale</div><h1 id="pageTitle">Panoramica di mercato</h1></div><div class="actions"><div class="date" id="updated">Caricamento…</div><button class="btn" id="method">Come leggerlo</button><button class="btn primary" id="reload" aria-label="Ricarica i dati pubblicati">↻ Aggiorna</button></div></header>
+<header class="topbar"><div><div class="eyebrow">Radar nuovo · confronto con il monitor attuale</div><h1 id="pageTitle">Panoramica di mercato</h1></div><div class="actions"><div class="date" id="updated">Caricamento…</div><button class="btn" id="method">Come leggerlo</button><button class="btn" id="reload">Rileggi risultati</button><button class="btn primary" id="refreshMarket">↻ Aggiorna mercato</button></div></header>
+<div class="scan-box"><p id="scanStatus" role="status" aria-live="polite">«Aggiorna mercato» avvia la scansione su GitHub e carica i risultati al termine.</p><p class="subtle">Il Radar legge le chiusure disponibili. Durante la seduta, la chiusura può restare quella di ieri; l’anteprima in seduta si aggiorna separatamente.</p><div class="small-actions"><span id="githubConnection" class="subtle"></span><button id="disconnectGitHub" hidden>Scollega</button><a id="scanRun" target="_blank" rel="noopener noreferrer" hidden>Dettagli esecuzione ↗</a><a href="https://github.com/chry791/stock-monitor/actions/workflows/radar.yml" target="_blank" rel="noopener noreferrer">Apri Radar nuovo su GitHub ↗</a></div><p id="readStatus" class="subtle" role="status" aria-live="polite"></p></div>
 <div id="notice" role="status" aria-live="polite"></div>
 <div id="loading" class="loading">Lettura degli ultimi dati pubblicati…</div>
 <div id="content" hidden>
@@ -41,6 +45,7 @@
 <footer class="footer"><span>Stock Monitor · Radar 5.0 · versione pilota affiancata · <a href="index.html">Apri il monitor attuale</a><br>Informazioni di mercato, nessun accesso al conto o invio di ordini.</span><span><a href="https://eodhd.com/financial-apis/" target="_blank" rel="noopener noreferrer">Dati EODHD</a> · <a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener noreferrer">Contesto FRED</a><br>Gli orari sono mostrati in Europe/Madrid.</span></footer>
 </div></main></div>
 <dialog id="detail"><button class="close" id="closeDetail" aria-label="Chiudi scheda">✕</button><div id="detailContent"></div></dialog>
+<dialog id="githubAuth" aria-labelledby="authTitle"><h2 id="authTitle">Collega GitHub per aggiornare il mercato</h2><p>Questo collegamento permette al pulsante di avviare <b>Radar nuovo</b> nel tuo repository <b>stock-monitor</b>.</p><ol class="auth-steps"><li>Apri <a href="https://github.com/settings/personal-access-tokens/new?name=Stock%20Monitor%20Radar&amp;target_name=chry791&amp;expires_in=30&amp;actions=write" target="_blank" rel="noopener noreferrer">la creazione del token GitHub</a>.</li><li>In <b>Repository access</b> scegli <b>Only select repositories</b>, poi <b>stock-monitor</b>.</li><li>Controlla che <b>Actions</b> abbia <b>Read and write</b>; non aggiungere altri permessi. <b>Metadata: Read</b> è automatico.</li><li>Premi <b>Generate token</b> e incolla qui il codice generato.</li></ol><p class="auth-note">Il codice viene inviato solo all’API di GitHub e rimane nella memoria di questa scheda. Non viene salvato nel sito o nel browser: chiudendo o ricaricando la pagina dovrai reinserirlo. Non incollarlo in chat. Non è la chiave EODHD.</p><form id="githubAuthForm"><label class="auth-label" for="githubToken">Token GitHub fine-grained</label><input class="auth-input" id="githubToken" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" required placeholder="github_pat_…"><p id="authError" class="auth-error" role="alert"></p><div class="auth-actions"><button class="btn primary" type="submit">Collega e aggiorna</button><button class="btn" type="button" id="cancelGitHub">Annulla</button></div></form></dialog>
 <script>
 'use strict';
 const $=id=>document.getElementById(id), esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -71,29 +76,199 @@ function drawLive(){if(!LIVE||DATA.mode==='historical_replay'){return;}const age
 const DATA_BASE=location.hostname==='chry791.github.io'
   ? 'https://raw.githubusercontent.com/chry791/stock-monitor/main/docs/' : '';
 async function fetchJSON(path){const r=await fetch(DATA_BASE+path+'?v='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('HTTP '+r.status);return r.json();}
-async function load(){
+let readingData=false;
+async function load(report=null){
+  if(readingData)return false;
+  readingData=true;
+  const button=$('reload'),previous=DATA?.generated_at;
+  button.disabled=true;button.textContent='Lettura…';
+  $('readStatus').textContent='Lettura dei risultati pubblicati…';
   try{
-    const incoming=window.STOCK_MONITOR_EMBEDDED||await fetchJSON('market.json');
-    if(incoming.schema_version!==5)throw new Error('Schema');
-    DATA=incoming; LIVE=null;
-    draw();
-  }catch(e){
-    DATA=null; LIVE=null;
-    $('content').hidden=true; $('loading').hidden=false;
-    $('updated').textContent='Dati Radar non disponibili';
-    $('loading').innerHTML='Il nuovo Radar non ha ancora dati leggibili. Dopo il caricamento dei file, avvia <b>Radar nuovo</b> nella scheda <b>Actions</b> di GitHub e poi premi <b>Aggiorna</b>.';
-    $('notice').innerHTML='<div class="banner">Il monitor attuale resta disponibile: <a href="index.html">aprilo qui</a>. Questa pagina mostra soltanto i risultati del nuovo Radar.</div>';
-    return;
-  }
-  $('livePanel').innerHTML='<h3>Anteprima in seduta · condivisa con il monitor attuale</h3><div class="subtle">Lettura dell’anteprima disponibile…</div>';
-  if(DATA.mode==='historical_replay'){$('livePanel').innerHTML='<h3>Anteprima in seduta</h3><div class="subtle">Non disponibile in questa anteprima storica.</div>';}
-  if(DATA.mode!=='historical_replay'){
-    try{LIVE=await fetchJSON('live.json');drawLive();}
-    catch{$('livePanel').innerHTML='<h3>Anteprima in seduta</h3><div class="subtle">Anteprima non disponibile. I dati della chiusura restano consultabili.</div>';}
+    try{
+      const incoming=report?.schema_version===5?report:(window.STOCK_MONITOR_EMBEDDED||await fetchJSON('market.json'));
+      if(incoming.schema_version!==5)throw new Error('Schema');
+      DATA=incoming;LIVE=null;draw();
+      $('readStatus').textContent=(previous===DATA.generated_at?'Nessuna nuova pubblicazione Radar. Ultima pubblicazione: ':'Pubblicazione Radar caricata: ')+stamp(DATA.generated_at)+'.';
+    }catch(e){
+      DATA=null;LIVE=null;
+      $('content').hidden=true;$('loading').hidden=false;
+      $('updated').textContent='Dati Radar non disponibili';
+      $('loading').innerHTML='Non riesco a leggere i risultati del Radar. Premi <b>Rileggi risultati</b> per riprovare o <b>Aggiorna mercato</b> per richiedere una scansione.';
+      $('notice').innerHTML='<div class="banner">Il monitor attuale resta disponibile: <a href="index.html">aprilo qui</a>.</div>';
+      $('readStatus').textContent='Lettura non riuscita: lo stato dei dati non è stato verificato.';
+      return false;
+    }
+    $('livePanel').innerHTML='<h3>Anteprima in seduta · condivisa con il monitor attuale</h3><div class="subtle">Lettura dell’anteprima disponibile…</div>';
+    if(DATA.mode==='historical_replay'){
+      $('livePanel').innerHTML='<h3>Anteprima in seduta</h3><div class="subtle">Non disponibile in questa anteprima storica.</div>';
+    }else{
+      try{LIVE=await fetchJSON('live.json');drawLive();}
+      catch{$('livePanel').innerHTML='<h3>Anteprima in seduta</h3><div class="subtle">Anteprima non disponibile. I dati della chiusura restano consultabili.</div>';}
+    }
+    return true;
+  }finally{
+    readingData=false;button.disabled=false;button.textContent='Rileggi risultati';
   }
 }
+
 function exportRows(){const cols=['ticker','name','area','asof','price','currency','pct','dist_max','status','candidate'];const cell=v=>{let s=String(v??'');if(/^[=+@\-]/.test(s)&&typeof v!=='number')s="'"+s;return '"'+s.replaceAll('"','""')+'"';};const csv='\ufeff'+[cols.join(';'),...filteredStocks().map(r=>cols.map(k=>cell(r[k])).join(';'))].join('\r\n');const link=document.createElement('a'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));link.href=url;link.download='stock-monitor-alert.csv';link.click();URL.revokeObjectURL(url);}
 document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view)));$('areas').querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{AREA=b.dataset.area;$('areas').querySelectorAll('button').forEach(c=>c.classList.toggle('active',c===b));drawIndicators();}));['search','stockArea','stockMode','candidates'].forEach(id=>$(id).addEventListener(id==='search'?'input':'change',()=>{PAGE=0;drawStocks();}));$('prev').addEventListener('click',()=>{PAGE--;drawStocks();});$('next').addEventListener('click',()=>{PAGE++;drawStocks();});$('export').addEventListener('click',exportRows);$('reload').addEventListener('click',load);$('closeDetail').addEventListener('click',()=>$('detail').close());$('method').addEventListener('click',()=>showDetail('<div class="eyebrow">Una lettura trasparente</div><h2>Il tuo osservatorio, ogni giorno.</h2><p><b>Flash titoli:</b> intercetta le variazioni della watchlist. CANDIDATO indica soltanto il rispetto dei filtri di prezzo.</p><p><b>Termometri:</b> tendenza, partecipazione, diffusione dei ribassi e volatilità. Le spie possono essere correlate: il loro numero non è una probabilità di crisi.</p><p><b>Data e copertura:</b> ogni indicatore porta la data effettiva. Sotto l’80% di copertura dell’universo, la misura regionale non riceve un colore operativo.</p><p><b>Soglie pilota:</b> descrivono condizioni osservate. La capacità di anticipare crisi deve essere verificata su nuovi periodi, contando falsi allarmi e segnali mancati.</p><p><b>Contesto macro:</b> le frequenze giornaliere, settimanali e mensili rimangono separate. Le quote di investimento e il conto Scalable non fanno parte di questo software.</p>'));
+// Authorization stays in this page's memory. It is never stored or put in a URL.
+const MarketRefresh=(()=>{
+  const ROOT='https://api.github.com/repos/chry791/stock-monitor';
+  const WORKFLOW='/actions/workflows/radar.yml';
+  const RUNS=WORKFLOW+'/runs?branch=main&per_page=30';
+  const ACTIVE=new Set(['queued','in_progress','requested','waiting','pending']);
+  let token='',busy=false,generation=0;
+  const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+  const say=message=>{$('scanStatus').textContent=message;};
+  const controls=()=>{
+    $('refreshMarket').disabled=busy;
+    $('refreshMarket').textContent=busy?'Scansione in corso…':'↻ Aggiorna mercato';
+    $('disconnectGitHub').hidden=!token;
+    $('githubConnection').textContent=token?'GitHub collegato per questa scheda.':'GitHub da collegare per avviare una scansione.';
+  };
+  const check=current=>{if(current!==generation)throw new Error('STOPPED');};
+  function runLink(id){
+    if(!Number.isSafeInteger(id)||id<=0)throw new Error('RUN_ID');
+    const link=$('scanRun');
+    link.href='https://github.com/chry791/stock-monitor/actions/runs/'+id;
+    link.hidden=false;
+  }
+  async function api(path,method='GET',body){
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),20000);
+    try{
+      const headers={Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2026-03-10',Authorization:'Bearer '+token};
+      if(body)headers['Content-Type']='application/json';
+      const response=await fetch(ROOT+path,{method,headers,body:body?JSON.stringify(body):undefined,signal:controller.signal,cache:'no-store',credentials:'omit',redirect:'error',referrerPolicy:'no-referrer'});
+      if(!response.ok){
+        const error=new Error('HTTP_'+response.status);error.status=response.status;throw error;
+      }
+      if(response.status===204)return null;
+      return await response.json();
+    }finally{clearTimeout(timer);}
+  }
+  async function listRuns(){
+    const data=await api(RUNS);
+    if(!Array.isArray(data?.workflow_runs))throw new Error('RUNS');
+    return data.workflow_runs.filter(r=>r.head_branch==='main');
+  }
+  async function resolveRun(previous,started,current){
+    // Compatibility with API versions returning 204: never dispatch again.
+    for(let attempt=0;attempt<12;attempt++){
+      check(current);
+      const matches=(await listRuns()).filter(r=>!previous.has(r.id)&&r.event==='workflow_dispatch'&&Date.parse(r.created_at)>=started-5000);
+      if(matches.length===1)return matches[0].id;
+      if(matches.length>1)throw new Error('AMBIGUOUS_RUN');
+      await pause(2500);
+    }
+    throw new Error('RUN_NOT_FOUND');
+  }
+  async function publication(run,current){
+    const previous=DATA?.generated_at;
+    const started=Date.parse(run.run_started_at||run.created_at);
+    for(let attempt=0;attempt<12;attempt++){
+      check(current);
+      say('Scansione terminata. Attendo i risultati pubblicati…');
+      try{
+        const incoming=await fetchJSON('market.json');
+        const produced=Date.parse(incoming.generated_at);
+        const matches=Number.isFinite(started)?produced>=started:incoming.generated_at!==previous;
+        if(incoming.schema_version===5&&incoming.mode==='live'&&matches){
+          check(current);
+          if(await load(incoming)){
+            check(current);
+            say('Aggiornamento completato. Pubblicazione Radar: '+stamp(incoming.generated_at)+'. Le date delle quotazioni sono indicate nelle schede.');
+            return;
+          }
+        }
+      }catch(error){if(error.message==='STOPPED')throw error;}
+      await pause(5000);
+    }
+    say('GitHub ha completato la scansione, ma i nuovi risultati non sono ancora leggibili. Premi «Rileggi risultati» tra poco; non serve avviare un’altra scansione.');
+  }
+  async function monitor(id,current){
+    runLink(id);
+    const deadline=Date.now()+45*60*1000;
+    let failures=0;
+    while(Date.now()<deadline){
+      check(current);
+      let run;
+      try{run=await api('/actions/runs/'+id);failures=0;}
+      catch(error){
+        if(error.status===401||error.status===403||error.status===404)throw error;
+        if(++failures>=3)throw error;
+        say('Scansione avviata. Collegamento temporaneamente interrotto: riprovo a leggere lo stato…');
+        await pause(10000);continue;
+      }
+      check(current);
+      if(run.id!==id)throw new Error('RUN_ID');
+      if(run.status==='completed'){
+        if(run.conclusion==='success')await publication(run,current);
+        else say(run.conclusion==='cancelled'?'Scansione annullata su GitHub. Nessun nuovo risultato confermato.':'Scansione non riuscita. Apri «Dettagli esecuzione» per leggere l’errore; i nuovi dati non sono confermati.');
+        return;
+      }
+      say(run.status==='in_progress'?'GitHub sta scaricando ed elaborando i dati. Lascia aperta questa pagina: i risultati si aggiorneranno al termine.':'Richiesta in coda su GitHub. Attendo l’avvio della scansione…');
+      await pause(10000);
+    }
+    say('L’attesa sulla pagina è terminata. La scansione potrebbe essere ancora in corso: controlla «Dettagli esecuzione».');
+  }
+  async function start(){
+    if(busy)return;
+    if(location.origin!=='https://chry791.github.io'){
+      say('Per avviare la scansione apri il Radar pubblicato su chry791.github.io, non il file scaricato.');return;
+    }
+    if(!token){$('githubAuth').showModal();$('githubToken').focus();return;}
+    const current=++generation;
+    let posted=false;
+    busy=true;controls();$('scanRun').hidden=true;
+    try{
+      say('Controllo se una scansione è già in corso…');
+      const before=await listRuns();check(current);
+      const active=before.find(r=>ACTIVE.has(r.status));
+      if(active){
+        say('Una scansione è già avviata. Seguo quella senza crearne un’altra.');
+        await monitor(active.id,current);return;
+      }
+      const started=Date.now();
+      say('Invio della richiesta a GitHub…');
+      posted=true;
+      const response=await api(WORKFLOW+'/dispatches','POST',{ref:'main'});
+      check(current);
+      const id=Number.isSafeInteger(response?.workflow_run_id)?response.workflow_run_id:await resolveRun(new Set(before.map(r=>r.id)),started,current);
+      await monitor(id,current);
+    }catch(error){
+      if(error.message==='STOPPED'||current!==generation)return;
+      if(error.status===401){token='';say('Autorizzazione scaduta o non valida. Premi «Aggiorna mercato» per collegare un nuovo token.');}
+      else if(error.status===403)say('GitHub non autorizza questa operazione oppure ha applicato un limite alle richieste. Controlla il token: repository stock-monitor, Actions «Read and write».');
+      else if(error.status===404)say('GitHub non trova la scansione o il token non ha accesso al repository stock-monitor. Controlla l’autorizzazione.');
+      else if(error.status===422)say('GitHub non ha accettato la richiesta. Controlla che Radar nuovo sia attivo sul ramo main e consenta l’avvio manuale.');
+      else say(posted?'La richiesta è stata inviata, ma non posso confermarne l’esito. Prima di riprovare controlla Radar nuovo su GitHub: potrebbe essere già in corso.':'Non riesco a contattare GitHub. Nessuna nuova scansione è stata richiesta.');
+    }finally{
+      if(current===generation){busy=false;controls();}
+    }
+  }
+  function connect(){
+    const input=$('githubToken'),value=input.value.trim();
+    if(!value.startsWith('github_pat_')){
+      $('authError').textContent='Inserisci il token fine-grained di GitHub. Non usare la chiave EODHD.';return;
+    }
+    token=value;input.value='';$('authError').textContent='';$('githubAuth').close();controls();
+    return start();
+  }
+  function disconnect(){
+    generation++;token='';busy=false;$('githubToken').value='';controls();
+    say('GitHub scollegato da questa pagina. Un’eventuale scansione già avviata continua su GitHub.');
+  }
+  $('refreshMarket').addEventListener('click',start);
+  $('disconnectGitHub').addEventListener('click',disconnect);
+  $('githubAuthForm').addEventListener('submit',event=>{event.preventDefault();connect();});
+  $('cancelGitHub').addEventListener('click',()=>$('githubAuth').close());
+  $('githubAuth').addEventListener('close',()=>{$('githubToken').value='';$('authError').textContent='';});
+  controls();
+  return {start,connect,disconnect};
+})();
+
 load();
 </script>
 </body>
