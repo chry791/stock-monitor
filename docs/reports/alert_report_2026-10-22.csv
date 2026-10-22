@@ -1,0 +1,55 @@
+Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
+MRNA.US,Moderna Inc,US,USD,245.81,202.63,-17.57%
+COHR.US,Coherent Corp,US,USD,237.53,207.82,-12.51%
+LRCX.US,Lam Research,US,USD,260.81,230.15,-11.76%
+LITE.US,Lumentum Holdings,US,USD,850.70,752.54,-11.54%
+CIEN.US,Ciena Corp,US,USD,361.34,322.64,-10.71%
+GEV.US,GE Vernova,US,USD,925.92,827.42,-10.64%
+TER.US,Teradyne Inc,US,USD,345.49,308.75,-10.63%
+VST.US,Vistra Corp,US,USD,156.14,140.83,-9.81%
+KLAC.US,KLA Corp,US,USD,163.43,147.83,-9.55%
+MPWR.US,Monolithic Power,US,USD,1283.32,1167.93,-8.99%
+KEYS.US,Keysight Technologies,US,USD,341.35,311.52,-8.74%
+ENR.XETRA,Siemens Energy,XETRA,EUR,133.64,122.20,-8.56%
+ATO.PA,Atos,PA,EUR,26.00,23.86,-8.23%
+AMAT.US,Applied Materials,US,USD,408.94,375.58,-8.16%
+AMD.US,Advanced Micro Devices,US,USD,552.72,507.93,-8.10%
+GLW.US,Corning Inc,US,USD,134.92,123.99,-8.10%
+PWR.US,Quanta Services,US,USD,601.14,552.44,-8.10%
+INTC.US,Intel Corp,US,USD,92.96,85.49,-8.04%
+SFTBY.US,SoftBank Group (ADR),US,USD,14.66,13.50,-7.91%
+ATEYY.US,Advantest (ADR),US,USD,220.88,203.50,-7.87%
+STX.US,Seagate Technology,US,USD,696.89,642.14,-7.86%
+PARA.US,Paramount Global,US,USD,0.51,0.47,-7.80%
+PRYMY.US,Prysmian (ADR),US,USD,60.85,56.12,-7.77%
+APH.US,Amphenol Corp,US,USD,79.20,73.07,-7.74%
+BKT.MC,Bankinter,MC,EUR,15.29,14.13,-7.56%
+GNRC.US,Generac Holdings,US,USD,203.14,188.02,-7.44%
+ANET.US,Arista Networks,US,USD,184.33,171.07,-7.19%
+HWM.US,Howmet Aerospace,US,USD,208.15,193.29,-7.14%
+META.US,Meta Platforms Inc,US,USD,697.52,648.85,-6.98%
+PH.US,Parker-Hannifin,US,USD,958.22,893.21,-6.78%
+NJDCY.US,Nidec (ADR),US,USD,2.79,2.60,-6.68%
+FRES.LSE,Fresnillo,LSE,GBX,2632.00,2462.00,-6.46%
+WDC.US,Western Digital,US,USD,378.51,354.19,-6.43%
+MRAAY.US,Murata (ADR),US,USD,21.48,20.10,-6.42%
+SNPS.US,Synopsys Inc,US,USD,451.19,422.48,-6.36%
+ETN.US,Eaton Corp,US,USD,393.94,368.99,-6.33%
+FCX.US,Freeport-McMoRan,US,USD,68.90,64.59,-6.26%
+IR.US,Ingersoll Rand,US,USD,79.06,74.11,-6.26%
+MU.US,Micron Technology,US,USD,913.67,856.49,-6.26%
+ANTO.LSE,Antofagasta,LSE,GBX,3224.00,3025.00,-6.17%
+IFX.XETRA,Infineon Technologies,XETRA,EUR,53.09,49.88,-6.04%
+LR.PA,Legrand,PA,EUR,131.30,123.65,-5.83%
+CEG.US,Constellation Energy,US,USD,270.74,255.21,-5.74%
+CABK.MC,CaixaBank,MC,EUR,11.80,11.13,-5.72%
+DDOG.US,Datadog,US,USD,273.09,257.75,-5.62%
+AAL.LSE,Anglo American,LSE,GBX,3840.00,3625.00,-5.60%
+RNECY.US,Renesas (ADR),US,USD,9.64,9.11,-5.50%
+NRG.US,NRG Energy,US,USD,99.80,94.38,-5.43%
+SU.PA,Schneider Electric,PA,EUR,249.10,235.75,-5.36%
+JCI.US,Johnson Controls,US,USD,151.02,143.00,-5.31%
+SMCI.US,Super Micro Computer,US,USD,35.57,33.72,-5.20%
+RR.LSE,Rolls-Royce Holdings,LSE,GBX,1327.40,1259.60,-5.11%
+CDNS.US,Cadence Design,US,USD,326.07,309.65,-5.04%
+ABN.AS,ABN AMRO,AS,EUR,40.86,38.81,-5.02%
