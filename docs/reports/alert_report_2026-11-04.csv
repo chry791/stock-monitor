@@ -1,0 +1,47 @@
+Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
+FIS.US,Fidelity National Info,US,USD,38.99,29.76,-23.67%
+TRMB.US,Trimble Inc,US,USD,65.61,54.25,-17.31%
+DDOG.US,Datadog,US,USD,220.52,188.72,-14.42%
+VST.US,Vistra Corp,US,USD,139.59,120.29,-13.83%
+NRG.US,NRG Energy,US,USD,96.26,83.25,-13.52%
+CVS.US,CVS Health,US,USD,91.41,79.96,-12.53%
+PWR.US,Quanta Services,US,USD,657.00,580.44,-11.65%
+ETN.US,Eaton Corp,US,USD,391.70,353.08,-9.86%
+WEIR.LSE,Weir Group,LSE,GBX,2630.00,2378.00,-9.58%
+GNRC.US,Generac Holdings,US,USD,209.28,189.32,-9.54%
+GEV.US,GE Vernova,US,USD,918.20,832.83,-9.30%
+CIEN.US,Ciena Corp,US,USD,300.08,272.24,-9.28%
+STX.US,Seagate Technology,US,USD,606.38,557.06,-8.13%
+MPC.US,Marathon Petroleum,US,USD,427.34,392.68,-8.11%
+ENR.XETRA,Siemens Energy,XETRA,EUR,129.78,119.46,-7.95%
+LITE.US,Lumentum Holdings,US,USD,680.16,626.75,-7.85%
+DVN.US,Devon Energy,US,USD,47.62,44.12,-7.35%
+CRL.US,Charles River Labs,US,USD,351.87,326.29,-7.27%
+MU.US,Micron Technology,US,USD,855.10,795.23,-7.00%
+LMT.US,Lockheed Martin,US,USD,639.00,595.04,-6.88%
+APA.US,APA Corp,US,USD,47.77,44.49,-6.87%
+TER.US,Teradyne Inc,US,USD,269.35,250.99,-6.82%
+WDC.US,Western Digital,US,USD,347.35,323.83,-6.77%
+CEG.US,Constellation Energy,US,USD,263.40,245.72,-6.71%
+LHX.US,L3Harris Technologies,US,USD,277.67,259.74,-6.46%
+WMB.US,Williams Companies,US,USD,72.47,67.86,-6.36%
+KEYS.US,Keysight Technologies,US,USD,305.11,285.86,-6.31%
+JCI.US,Johnson Controls,US,USD,149.91,140.53,-6.26%
+APH.US,Amphenol Corp,US,USD,84.19,79.01,-6.15%
+COHR.US,Coherent Corp,US,USD,207.49,195.09,-5.98%
+PRYMY.US,Prysmian (ADR),US,USD,62.83,59.08,-5.97%
+GLW.US,Corning Inc,US,USD,126.14,118.77,-5.84%
+IDR.MC,Indra Sistemas,MC,EUR,63.58,59.88,-5.82%
+CMI.US,Cummins Inc,US,USD,500.69,471.84,-5.76%
+VLO.US,Valero Energy,US,USD,387.65,365.34,-5.76%
+SMCI.US,Super Micro Computer,US,USD,31.39,29.60,-5.70%
+HPE.US,Hewlett Packard Enterprise,US,USD,53.10,50.09,-5.67%
+BKR.US,Baker Hughes,US,USD,52.79,49.87,-5.53%
+CAT.US,Caterpillar Inc,US,USD,623.94,591.30,-5.23%
+EOG.US,EOG Resources,US,USD,155.17,147.06,-5.23%
+NTTYY.US,NTT (ADR),US,USD,27.54,26.10,-5.23%
+COP.US,ConocoPhillips,US,USD,144.40,136.94,-5.17%
+STMPA.PA,STMicroelectronics,PA,EUR,43.10,40.88,-5.14%
+OXY.US,Occidental Petroleum,US,USD,60.43,57.33,-5.13%
+ACS.MC,ACS,MC,EUR,92.30,87.60,-5.09%
+MPWR.US,Monolithic Power,US,USD,1328.30,1261.08,-5.06%
