@@ -1,9 +1,9 @@
 Ticker,Nome,Indice,Valuta,Close Prec,Close Att,Var %
 NJDCY.US,Nidec (ADR),US,USD,4.01,2.50,-37.66%
-JAPAY.US,Japan Tobacco (ADR),US,USD,24.61,16.98,-30.99%
 PARA.US,Paramount Global,US,USD,0.16,0.11,-30.18%
 AXON.US,Axon Enterprise,US,USD,382.56,313.00,-18.18%
 TEP.PA,Teleperformance,PA,EUR,80.80,68.44,-15.30%
+JAPAY.US,Japan Tobacco (ADR),US,USD,20.00,16.98,-15.10%
 MCHP.US,Microchip Technology,US,USD,64.85,58.35,-10.02%
 FMC.US,FMC Corp,US,USD,6.07,5.63,-7.25%
 DSNKY.US,Daiichi Sankyo (ADR),US,USD,19.10,17.80,-6.81%
@@ -13,6 +13,7 @@ CHTR.US,Charter Communications,US,USD,125.86,118.07,-6.19%
 PODD.US,Insulet Corp,US,USD,156.12,146.51,-6.16%
 DXCM.US,DexCom Inc,US,USD,84.46,79.41,-5.98%
 CNC.US,Centene Corp,US,USD,74.17,69.74,-5.97%
+HOCPY.US,Hoya (ADR),US,USD,152.50,143.70,-5.77%
 SMCAY.US,SMC Corp (ADR),US,USD,18.73,17.74,-5.27%
-KDDIY.US,KDDI (ADR),US,USD,18.62,17.66,-5.17%
+ITOCY.US,Itochu (ADR),US,USD,15.17,14.40,-5.10%
 PAYC.US,Paycom Software,US,USD,250.02,237.32,-5.08%
